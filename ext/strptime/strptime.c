@@ -79,54 +79,26 @@ static const char *month_names[] = {
 
 #define issign(c) ((c) == '-' || (c) == '+')
 
+/* imply NUL-terminated string */
 static long
 read_digits(const char *s, VALUE *n, size_t width)
 {
-    size_t l;
+    const char *s0 = s;
+    const char *se = s + width;
+    int64_t r = 0;
 
-    l = strspn(s, "0123456789");
-
-    if (l == 0)
-	return 0;
-
-    if (width < l)
-	l = width;
-
-    if ((4 * l * sizeof(char)) <= (sizeof(long)*CHAR_BIT)) {
-	const char *os = s;
-	long v;
-
-	v = 0;
-	while ((size_t)(s - os) < l) {
-	    v *= 10;
-	    v += *s - '0';
-	    s++;
-	}
-	if (os == s)
-	    return 0;
-	*n = LONG2NUM(v);
-	return l;
+    for ( ; s < se && '0' <= *s && *s <= '9'; s++) {
+	r *= 10;
+	r += *s - '0';
     }
-    else {
-	char *s2 = ALLOCA_N(char, l + 1);
-	memcpy(s2, s, l);
-	s2[l] = '\0';
-	*n = rb_cstr_to_inum(s2, 10, 0);
-	return l;
-    }
+    *n = LL2NUM(r);
+    return (long)(s-s0);
 }
-
-#define set_hash(k,v) rb_hash_aset(hash, ID2SYM(rb_intern(k)), v)
-#define ref_hash(k) rb_hash_aref(hash, ID2SYM(rb_intern(k)))
-#define del_hash(k) rb_hash_delete(hash, ID2SYM(rb_intern(k)))
 
 #define fail() \
 { \
-    set_hash("_fail", Qtrue); \
-    return 0; \
+    return Qnil; \
 }
-
-#define fail_p() (!NIL_P(ref_hash("_fail")))
 
 #define READ_DIGITS(n,w) \
 { \
@@ -163,13 +135,13 @@ LABEL_PTR(U), LABEL_PTR(V), LABEL_PTR(W), LABEL_PTR(X), LABEL_PTR(Y),
 LABEL_PTR(Z), LABEL_PTR(_25), LABEL_PTR(_2b), LABEL_PTR(_3a), NULL, LABEL_PTR(_5f), LABEL_PTR(_60),
 LABEL_PTR(a), LABEL_PTR(B), LABEL_PTR(c), LABEL_PTR(d), LABEL_PTR(d),
 NULL, LABEL_PTR(g), LABEL_PTR(B), NULL, LABEL_PTR(j),
-LABEL_PTR(k), LABEL_PTR(l), LABEL_PTR(m), LABEL_PTR(n), NULL,
+NULL, LABEL_PTR(l), LABEL_PTR(m), LABEL_PTR(n), NULL,
 LABEL_PTR(p), NULL, LABEL_PTR(r), LABEL_PTR(s), LABEL_PTR(t),
 LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(z),
 	};
 	return (VALUE)insns_address_table;
     }
-    VALUE hash = rb_hash_new();
+    VALUE year=INT2FIX(1970), mon=INT2FIX(1), mday=INT2FIX(1), hour=INT2FIX(0), min=INT2FIX(0), sec=INT2FIX(0);
 
   first:
     INSN_DISPATCH();
@@ -182,7 +154,7 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
 	    size_t l = strlen(month_names[i]);
 	    if (strncasecmp(month_names[i], &str[si], l) == 0) {
 		si += l;
-		set_hash("mon", INT2FIX((i % 12) + 1));
+		mon = INT2FIX((i % 12) + 1);
 		ADD_PC(1);
 		END_INSN(B)
 	    }
@@ -194,7 +166,20 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
     INSN_ENTRY(E){ END_INSN(E)}
     INSN_ENTRY(F){ END_INSN(F)}
     INSN_ENTRY(G){ END_INSN(G)}
-    INSN_ENTRY(H){ END_INSN(H)}
+    INSN_ENTRY(H){
+	VALUE n;
+
+	if (str[si] == ' ') {
+	    si++;
+	    READ_DIGITS(n, 1);
+	} else {
+	    READ_DIGITS(n, 2);
+	}
+	if (!valid_range_p(n, 0, 23))
+	    fail();
+	hour = n;
+	pc++;
+	END_INSN(H)}
     INSN_ENTRY(I){ END_INSN(I)}
     INSN_ENTRY(L){ END_INSN(L)}
     INSN_ENTRY(M){
@@ -203,14 +188,23 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
 	READ_DIGITS(n, 2);
 	if (!valid_range_p(n, 0, 59))
 	    fail();
-	set_hash("min", n);
-    END_INSN(M)} 
+	min = n;
+	pc++;
+	END_INSN(M)} 
     INSN_ENTRY(N){ END_INSN(N)}
     INSN_ENTRY(O){ END_INSN(O)}
     INSN_ENTRY(P){ END_INSN(P)}
     INSN_ENTRY(Q){ END_INSN(Q)}
     INSN_ENTRY(R){ END_INSN(R)}
-    INSN_ENTRY(S){ END_INSN(S)}
+    INSN_ENTRY(S){
+	VALUE n;
+
+	READ_DIGITS(n, 2);
+	if (!valid_range_p(n, 0, 60))
+	    fail();
+	sec = n;
+	pc++;
+	END_INSN(S)}
     INSN_ENTRY(T){ END_INSN(T)}
     INSN_ENTRY(U){ END_INSN(U)}
     INSN_ENTRY(V){ END_INSN(V)}
@@ -228,29 +222,28 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
        READ_DIGITS(n, 4);
        if (sign == -1)
 	   n = f_negate(n);
-       set_hash("year", n);
+       year = n;
        ADD_PC(1);
     END_INSN(Y)}
     INSN_ENTRY(Z){ END_INSN(Z)}
     INSN_ENTRY(a){ END_INSN(a)}
     INSN_ENTRY(c){ END_INSN(c)}
     INSN_ENTRY(d){
-		    VALUE n;
+	VALUE n;
 
-		    if (str[si] == ' ') {
-			si++;
-			READ_DIGITS(n, 1);
-		    } else {
-			READ_DIGITS(n, 2);
-		    }
-		    if (!valid_range_p(n, 1, 31))
-			fail();
-		    set_hash("mday", n);
+	if (str[si] == ' ') {
+	    si++;
+	    READ_DIGITS(n, 1);
+	} else {
+	    READ_DIGITS(n, 2);
+	}
+	if (!valid_range_p(n, 1, 31))
+	    fail();
+	mday = n;
 	pc++;
     END_INSN(d)}
     INSN_ENTRY(g){ END_INSN(g)}
     INSN_ENTRY(j){ END_INSN(j)}
-    INSN_ENTRY(k){ END_INSN(k)}
     INSN_ENTRY(l){ END_INSN(l)}
     INSN_ENTRY(m){
 	VALUE n;
@@ -258,7 +251,7 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
 	READ_DIGITS(n, 2);
 	if (!valid_range_p(n, 1, 12))
 	    fail();
-	set_hash("mon", n);
+	mon = n;
 	pc++;
     END_INSN(m)}
     INSN_ENTRY(n){ END_INSN(n)}
@@ -283,7 +276,25 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
 	pc += 2;
 	si += cnt;
     END_INSN(_60)}
-    INSN_ENTRY(_5f){ return hash; END_INSN(_5f)}
+    INSN_ENTRY(_5f){
+	// int argc = 6;
+	// VALUE args[] = {year, mon, mday, hour, min, sec};
+	struct tm tm = {FIX2INT(sec), FIX2INT(min), FIX2INT(hour), FIX2INT(mday), FIX2INT(mon)-1, FIX2INT(year)-1900, 0, 0, 0, 0, ""};
+	time_t t;
+	static time_t ct;
+	static struct tm cache;
+	if (ct && cache.tm_year == tm.tm_year && cache.tm_mon == tm.tm_mon &&
+		cache.tm_mday == tm.tm_mday) {
+	    t = ct + (tm.tm_hour-cache.tm_hour)*3600 + (tm.tm_min-cache.tm_min)*60 +
+		(tm.tm_sec-cache.tm_sec);
+	}
+	else {
+	    ct = t = timegm(&tm);
+	    memcpy((void *)&cache, &tm, sizeof(struct tm));
+	}
+	return rb_time_num_new(LONG2NUM(t), INT2FIX(0));
+	// return rb_funcallv(rb_cTime, rb_intern("utc"), argc, args);
+	END_INSN(_5f)}
     END_INSNS_DISPATCH();
 
     /* unreachable */
@@ -298,7 +309,6 @@ strptime_compile(const char *fmt, size_t flen)
     char c;
     void **isns0 = ALLOC_N(void*, flen+2);
     void **isns = isns0;
-    VALUE hash = rb_hash_new();
     void **insns_address_table = (void **)strptime_exec0(NULL, NULL, 0, NULL, 0);
     void *tmp;
 
@@ -431,10 +441,13 @@ static VALUE
 strptime_exec(VALUE self, VALUE str)
 {
     struct strptime_object *tobj;
+    VALUE v;
     GetStrptimeval(self, tobj);
 
-    return strptime_exec0(tobj->isns, RSTRING_PTR(tobj->fmt), RSTRING_LEN(tobj->fmt),
+    v = strptime_exec0(tobj->isns, RSTRING_PTR(tobj->fmt), RSTRING_LEN(tobj->fmt),
 	    RSTRING_PTR(str), RSTRING_LEN(str));
+    if (NIL_P(v)) rb_raise(rb_eArgError, "invalid date");
+    return v;
 }
 
 static VALUE
