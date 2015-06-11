@@ -478,6 +478,20 @@ strptime_exec(VALUE self, VALUE str)
 }
 
 static VALUE
+strptime_execi(VALUE self, VALUE str)
+{
+    struct strptime_object *tobj;
+    time_t t;
+    int r, subsec=0, gmtoff=0;
+    GetStrptimeval(self, tobj);
+
+    r = strptime_exec0(tobj->isns, RSTRING_PTR(tobj->fmt),
+	    RSTRING_PTR(str), RSTRING_LEN(str), &t, &subsec, &gmtoff);
+    if (r) rb_raise(rb_eArgError, "string doesn't match");
+    return TIMET2NUM(t);
+}
+
+static VALUE
 strptime_source(VALUE self)
 {
     struct strptime_object *tobj;
@@ -494,5 +508,6 @@ Init_strptime(void)
     rb_define_method(rb_cStrptime, "initialize", strptime_init, 1);
     rb_define_method(rb_cStrptime, "initialize_copy", strptime_init_copy, 1);
     rb_define_method(rb_cStrptime, "exec", strptime_exec, 1);
+    rb_define_method(rb_cStrptime, "execi", strptime_execi, 1);
     rb_define_method(rb_cStrptime, "source", strptime_source, 0);
 }
