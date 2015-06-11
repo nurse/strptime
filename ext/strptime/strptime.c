@@ -82,15 +82,14 @@ read_digits(const char *s, int *n, size_t width)
 
 #define fail() \
 { \
-    return Qnil; \
+    return -1; \
 }
 
 #define READ_DIGITS(n,w) \
 { \
     size_t l; \
     l = read_digits(&str[si], &n, w); \
-    if (l == 0) \
-	fail();	\
+    if (l == 0) fail(); \
     si += l; \
 }
 
@@ -101,13 +100,14 @@ valid_range_p(int v, int a, int b)
 {
     return !(v < a || v > b);
 }
-VALUE
-strptime_exec0(void **pc, const char *fmt, size_t flen,
-	const char *str, size_t slen)
+
+static int
+strptime_exec0(void **pc, const char *fmt, const char *str, size_t slen,
+	time_t *timep, int *nsecp, int *gmtoffp)
 {
     size_t si = 0;
-    int year=1970, mon=1, mday=1, hour=0, min=0, sec=0, subsec=0, scale=0, gmtoff=0;
-    if (UNLIKELY(pc == NULL)) {
+    int year=1970, mon=1, mday=1, hour=0, min=0, sec=0, nsec=0, gmtoff=0;
+    if (UNLIKELY(timep == NULL)) {
 	static const void *const insns_address_table[] = {
 LABEL_PTR(A), LABEL_PTR(B), LABEL_PTR(C), LABEL_PTR(D), LABEL_PTR(E),
 LABEL_PTR(F), LABEL_PTR(G), LABEL_PTR(H), LABEL_PTR(I), NULL,
@@ -121,7 +121,8 @@ NULL, LABEL_PTR(l), LABEL_PTR(m), LABEL_PTR(n), NULL,
 LABEL_PTR(p), NULL, LABEL_PTR(r), LABEL_PTR(s), LABEL_PTR(t),
 LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(z),
 	};
-	return (VALUE)insns_address_table;
+	*pc = (void *)insns_address_table;
+	return 0;
     }
 
   first:
@@ -129,8 +130,6 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
     INSN_ENTRY(A){ END_INSN(A)}
     INSN_ENTRY(B){
 	int i;
-
-	//fprintf(stderr,"%d: %s\n",__LINE__,str+si);
 	for (i = 0; i < (int)sizeof_array(month_names); i++) {
 	    size_t l = strlen(month_names[i]);
 	    if (strncasecmp(month_names[i], &str[si], l) == 0) {
@@ -168,12 +167,11 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
 	END_INSN(M)} 
     INSN_ENTRY(N){
 	size_t l;
-	l = read_digits(&str[si], &subsec, 9);
+	l = read_digits(&str[si], &nsec, 9);
 	if (!l) fail();
 	si += l;
-	scale = 1;
-	for (; l > 0; l--) {
-	    scale *= 10;
+	for (; l < 9; l++) {
+	    nsec *= 10;
 	}
 	ADD_PC(1);
 	END_INSN(N)}
@@ -282,17 +280,10 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
 	    ct = t = timegm(&tm);
 	    memcpy((void *)&cache, &tm, sizeof(struct tm));
 	}
-	t -= gmtoff;
-	if (subsec) {
-	    VALUE sv = rb_int2big(scale);
-	    v = rb_big_mul(sv, TIMET2NUM(t));
-	    v = rb_big_plus(rb_int2big(subsec), v);
-	    v = rb_rational_raw(v, sv);
-	}
-	else {
-	    v = LONG2NUM(t);
-	}
-	return rb_time_num_new(v, INT2FIX(gmtoff));
+	*timep = t - gmtoff;
+	*nsecp = nsec;
+	*gmtoffp = gmtoff;
+	return 0;
 	END_INSN(_5f)}
     END_INSNS_DISPATCH();
 
@@ -308,7 +299,8 @@ strptime_compile(const char *fmt, size_t flen)
     char c;
     void **isns0 = ALLOC_N(void*, flen+2);
     void **isns = isns0;
-    void **insns_address_table = (void **)strptime_exec0(NULL, NULL, 0, NULL, 0);
+    void **insns_address_table;
+    strptime_exec0((void**)&insns_address_table, NULL, NULL, 0, NULL, NULL, NULL);
     void *tmp;
 
     while (fi < flen) {
@@ -436,17 +428,53 @@ strptime_init_copy(VALUE copy, VALUE self)
     return copy;
 }
 
+typedef uint64_t WIDEVALUE;
+typedef WIDEVALUE wideval_t;
+PACKED_STRUCT_UNALIGNED(struct vtm {
+    VALUE year; /* 2000 for example.  Integer. */
+    VALUE subsecx; /* 0 <= subsecx < TIME_SCALE.  possibly Rational. */
+    VALUE utc_offset; /* -3600 as -01:00 for example.  possibly Rational. */
+    const char *zone; /* "JST", "EST", "EDT", etc. */
+    uint16_t yday:9; /* 1..366 */
+    uint8_t mon:4; /* 1..12 */
+    uint8_t mday:5; /* 1..31 */
+    uint8_t hour:5; /* 0..23 */
+    uint8_t min:6; /* 0..59 */
+    uint8_t sec:6; /* 0..60 */
+    uint8_t wday:3; /* 0:Sunday, 1:Monday, ..., 6:Saturday 7:init */
+    uint8_t isdst:2; /* 0:StandardTime 1:DayLightSavingTime 3:init */
+});
+PACKED_STRUCT_UNALIGNED(struct time_object {
+    wideval_t timew; /* time_t value * TIME_SCALE.  possibly Rational. */
+    struct vtm vtm;
+    uint8_t gmt:3; /* 0:utc 1:localtime 2:fixoff 3:init */
+    uint8_t tm_got:1;
+});
+
 static VALUE
 strptime_exec(VALUE self, VALUE str)
 {
     struct strptime_object *tobj;
-    VALUE v;
+    time_t t;
+    int r, nsec=0, gmtoff=0;
     GetStrptimeval(self, tobj);
 
-    v = strptime_exec0(tobj->isns, RSTRING_PTR(tobj->fmt), RSTRING_LEN(tobj->fmt),
-	    RSTRING_PTR(str), RSTRING_LEN(str));
-    if (NIL_P(v)) rb_raise(rb_eArgError, "invalid date");
-    return v;
+    r = strptime_exec0(tobj->isns, RSTRING_PTR(tobj->fmt),
+	    RSTRING_PTR(str), RSTRING_LEN(str), &t, &nsec, &gmtoff);
+    if (r) rb_raise(rb_eArgError, "string doesn't match");
+    if (nsec) {
+	VALUE obj = rb_time_nano_new(t, nsec);
+	struct time_object *tobj = DATA_PTR(obj);
+	tobj->tm_got = 0;
+	tobj->gmt = 2;
+	tobj->vtm.utc_offset = INT2FIX(gmtoff);
+	tobj->vtm.zone = NULL;
+
+	return obj;
+    }
+    else {
+	return rb_time_num_new(TIMET2NUM(t), INT2FIX(gmtoff));
+    }
 }
 
 static VALUE
