@@ -79,6 +79,8 @@ static const char *month_names[] = {
 #define f_end(o,i) rb_funcall(o, rb_intern("end"), 1, i)
 
 #define issign(c) ((c) == '-' || (c) == '+')
+#undef isdigit
+#define isdigit(c) ((unsigned char)((c) - '0') <= 9u)
 
 /* imply NUL-terminated string */
 static long
@@ -88,9 +90,9 @@ read_digits(const char *s, VALUE *n, size_t width)
     const char *se = s + width;
     int64_t r = 0;
 
-    for ( ; s < se && '0' <= *s && *s <= '9'; s++) {
+    for ( ; s < se && isdigit(*s); s++) {
 	r *= 10;
-	r += *s - '0';
+	r += (unsigned char)((*s) - '0');
     }
     *n = LL2NUM(r);
     return (long)(s-s0);
