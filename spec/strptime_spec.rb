@@ -73,6 +73,18 @@ describe Strptime do
     expect{pr.exec("61")}.to raise_error(ArgumentError)
   end
 
+  it 'parses %Y%m%d%H%M%S with gmtoff' do
+    pr = Strptime.new("%Y%m%d%H%M%S%z")
+    expect(pr.exec("20150610102415+0").to_i).to eq(1433931855)
+    expect(pr.exec("20150610102415+9").to_i).to eq(1433931855+540)
+    expect(pr.exec("20150610102415+09").to_i).to eq(1433931855+540)
+    expect(pr.exec("20150610102415+09:00").to_i).to eq(1433931855+540)
+    expect(pr.exec("20150610102415+09:0").to_i).to eq(1433931855+540)
+    expect(pr.exec("20150610102415+0900").to_i).to eq(1433931855+540)
+    expect(pr.exec("20150610102415+090").to_i).to eq(1433931855+540)
+    expect(pr.exec("20150610102415-1901").to_i).to eq(1433931855-19*60-1)
+  end
+
   it 'parses %Y%m%d%H%M%S' do
     pr = Strptime.new("%Y%m%d%H%M%S")
     h = pr.exec("20150610102415")

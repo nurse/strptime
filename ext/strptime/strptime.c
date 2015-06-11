@@ -240,7 +240,27 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
     INSN_ENTRY(w){ END_INSN(w)}
     INSN_ENTRY(x){ END_INSN(x)}
     INSN_ENTRY(y){ END_INSN(y)}
-    INSN_ENTRY(z){ END_INSN(z)}
+    INSN_ENTRY(z){
+	const char *p0 = str + si;
+	int r;
+	size_t l;
+	if (*p0 == 'z') {
+	    gmtoff = 0;
+	    ADD_PC(1);
+	    END_INSN(z)
+	}
+	if (issign(*p0)) si++;
+	READ_DIGITS(r, 2);
+	gmtoff = r * 60;
+	if (str[si] == ':') si++;
+	l = read_digits(&str[si], &r, 2);
+	if (l) {
+	    si += l;
+	    gmtoff += r;
+	}
+	if (*p0 == '-') gmtoff = -gmtoff;
+	ADD_PC(1);
+	END_INSN(z)}
     INSN_ENTRY(_25){ END_INSN(_25)}
     INSN_ENTRY(_2b){ END_INSN(_2b)}
     INSN_ENTRY(_3a){ END_INSN(_3a)}
@@ -255,7 +275,7 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
     INSN_ENTRY(_5f){
 	// int argc = 6;
 	// VALUE args[] = {year, mon, mday, hour, min, sec};
-	struct tm tm = {sec, min, hour, mday, mon-1, year-1900, 0, 0, 0, 0, ""};
+	struct tm tm = {sec, min, hour, mday, mon-1, year-1900};
 	time_t t;
 	static time_t ct;
 	static struct tm cache;
@@ -268,6 +288,7 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
 	    ct = t = timegm(&tm);
 	    memcpy((void *)&cache, &tm, sizeof(struct tm));
 	}
+	t += gmtoff;
 	return rb_time_num_new(LONG2NUM(t), INT2FIX(0));
 	// return rb_funcallv(rb_cTime, rb_intern("utc"), argc, args);
 	END_INSN(_5f)}
