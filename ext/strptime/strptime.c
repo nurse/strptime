@@ -1,4 +1,5 @@
 #include "strptime.h"
+#include <time.h>
 
 VALUE rb_cStrptime;
 
