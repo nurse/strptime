@@ -83,19 +83,19 @@ static const char *month_names[] = {
 #define isdigit(c) ((unsigned char)((c) - '0') <= 9u)
 
 /* imply NUL-terminated string */
-static long
-read_digits(const char *s, VALUE *n, size_t width)
+static size_t
+read_digits(const char *s, int *n, size_t width)
 {
     const char *s0 = s;
     const char *se = s + width;
-    int64_t r = 0;
+    int r = 0;
 
     for ( ; s < se && isdigit(*s); s++) {
 	r *= 10;
 	r += (unsigned char)((*s) - '0');
     }
-    *n = LL2NUM(r);
-    return (long)(s-s0);
+    *n = r;
+    return (size_t)(s-s0);
 }
 
 #define fail() \
@@ -115,19 +115,16 @@ read_digits(const char *s, VALUE *n, size_t width)
 #define READ_DIGITS_MAX(n) READ_DIGITS(n, LONG_MAX)
 
 static int
-valid_range_p(VALUE v, int a, int b)
+valid_range_p(int v, int a, int b)
 {
-    if (FIXNUM_P(v)) {
-	int vi = FIX2INT(v);
-	return !(vi < a || vi > b);
-    }
-    return !(f_lt_p(v, INT2NUM(a)) || f_gt_p(v, INT2NUM(b)));
+    return !(v < a || v > b);
 }
 VALUE
 strptime_exec0(void **pc, const char *fmt, size_t flen,
 	const char *str, size_t slen)
 {
     size_t si = 0;
+    int year=1970, mon=1, mday=1, hour=0, min=0, sec=0, gmtoff=0;
     if (UNLIKELY(pc == NULL)) {
 	static const void *const insns_address_table[] = {
 LABEL_PTR(A), LABEL_PTR(B), LABEL_PTR(C), LABEL_PTR(D), LABEL_PTR(E),
@@ -144,7 +141,6 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
 	};
 	return (VALUE)insns_address_table;
     }
-    VALUE year=INT2FIX(1970), mon=INT2FIX(1), mday=INT2FIX(1), hour=INT2FIX(0), min=INT2FIX(0), sec=INT2FIX(0);
 
   first:
     INSN_DISPATCH();
@@ -157,7 +153,7 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
 	    size_t l = strlen(month_names[i]);
 	    if (strncasecmp(month_names[i], &str[si], l) == 0) {
 		si += l;
-		mon = INT2FIX((i % 12) + 1);
+		mon = (i % 12) + 1;
 		ADD_PC(1);
 		END_INSN(B)
 	    }
@@ -170,29 +166,23 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
     INSN_ENTRY(F){ END_INSN(F)}
     INSN_ENTRY(G){ END_INSN(G)}
     INSN_ENTRY(H){
-	VALUE n;
-
 	if (str[si] == ' ') {
 	    si++;
-	    READ_DIGITS(n, 1);
+	    READ_DIGITS(hour, 1);
 	} else {
-	    READ_DIGITS(n, 2);
+	    READ_DIGITS(hour, 2);
 	}
-	if (!valid_range_p(n, 0, 23))
+	if (!valid_range_p(hour, 0, 23))
 	    fail();
-	hour = n;
-	pc++;
+	ADD_PC(1);
 	END_INSN(H)}
     INSN_ENTRY(I){ END_INSN(I)}
     INSN_ENTRY(L){ END_INSN(L)}
     INSN_ENTRY(M){
-	VALUE n;
-
-	READ_DIGITS(n, 2);
-	if (!valid_range_p(n, 0, 59))
+	READ_DIGITS(min, 2);
+	if (!valid_range_p(min, 0, 59))
 	    fail();
-	min = n;
-	pc++;
+	ADD_PC(1);
 	END_INSN(M)} 
     INSN_ENTRY(N){ END_INSN(N)}
     INSN_ENTRY(O){ END_INSN(O)}
@@ -200,13 +190,10 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
     INSN_ENTRY(Q){ END_INSN(Q)}
     INSN_ENTRY(R){ END_INSN(R)}
     INSN_ENTRY(S){
-	VALUE n;
-
-	READ_DIGITS(n, 2);
-	if (!valid_range_p(n, 0, 60))
+	READ_DIGITS(sec, 2);
+	if (!valid_range_p(sec, 0, 60))
 	    fail();
-	sec = n;
-	pc++;
+	ADD_PC(1);
 	END_INSN(S)}
     INSN_ENTRY(T){ END_INSN(T)}
     INSN_ENTRY(U){ END_INSN(U)}
@@ -214,48 +201,34 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
     INSN_ENTRY(W){ END_INSN(W)}
     INSN_ENTRY(X){ END_INSN(X)}
     INSN_ENTRY(Y){
-       VALUE n;
-       int sign = 1;
-
-       if (issign(str[si])) {
-	   if (str[si] == '-')
-	       sign = -1;
-	   si++;
-       }
-       READ_DIGITS(n, 4);
-       if (sign == -1)
-	   n = f_negate(n);
-       year = n;
-       ADD_PC(1);
-    END_INSN(Y)}
+	char c = str[si];
+	if (issign(c)) si++;
+	READ_DIGITS(year, 4);
+	if (c == '-') year *= -1;
+	ADD_PC(1);
+	END_INSN(Y)}
     INSN_ENTRY(Z){ END_INSN(Z)}
     INSN_ENTRY(a){ END_INSN(a)}
     INSN_ENTRY(c){ END_INSN(c)}
     INSN_ENTRY(d){
-	VALUE n;
-
 	if (str[si] == ' ') {
 	    si++;
-	    READ_DIGITS(n, 1);
+	    READ_DIGITS(mday, 1);
 	} else {
-	    READ_DIGITS(n, 2);
+	    READ_DIGITS(mday, 2);
 	}
-	if (!valid_range_p(n, 1, 31))
+	if (!valid_range_p(mday, 1, 31))
 	    fail();
-	mday = n;
-	pc++;
+	ADD_PC(1);
     END_INSN(d)}
     INSN_ENTRY(g){ END_INSN(g)}
     INSN_ENTRY(j){ END_INSN(j)}
     INSN_ENTRY(l){ END_INSN(l)}
     INSN_ENTRY(m){
-	VALUE n;
-
-	READ_DIGITS(n, 2);
-	if (!valid_range_p(n, 1, 12))
+	READ_DIGITS(mon, 2);
+	if (!valid_range_p(mon, 1, 12))
 	    fail();
-	mon = n;
-	pc++;
+	ADD_PC(1);
     END_INSN(m)}
     INSN_ENTRY(n){ END_INSN(n)}
     INSN_ENTRY(p){ END_INSN(p)}
@@ -282,7 +255,7 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
     INSN_ENTRY(_5f){
 	// int argc = 6;
 	// VALUE args[] = {year, mon, mday, hour, min, sec};
-	struct tm tm = {FIX2INT(sec), FIX2INT(min), FIX2INT(hour), FIX2INT(mday), FIX2INT(mon)-1, FIX2INT(year)-1900, 0, 0, 0, 0, ""};
+	struct tm tm = {sec, min, hour, mday, mon-1, year-1900, 0, 0, 0, 0, ""};
 	time_t t;
 	static time_t ct;
 	static struct tm cache;
