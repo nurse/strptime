@@ -60,24 +60,6 @@ static const char *month_names[] = {
 
 #define sizeof_array(o) (sizeof o / sizeof o[0])
 
-#define f_negate(x) rb_funcall(x, rb_intern("-@"), 0)
-#define f_add(x,y) rb_funcall(x, '+', 1, y)
-#define f_sub(x,y) rb_funcall(x, '-', 1, y)
-#define f_mul(x,y) rb_funcall(x, '*', 1, y)
-#define f_div(x,y) rb_funcall(x, '/', 1, y)
-#define f_idiv(x,y) rb_funcall(x, rb_intern("div"), 1, y)
-#define f_mod(x,y) rb_funcall(x, '%', 1, y)
-#define f_expt(x,y) rb_funcall(x, rb_intern("**"), 1, y)
-
-#define f_lt_p(x,y) rb_funcall(x, '<', 1, y)
-#define f_gt_p(x,y) rb_funcall(x, '>', 1, y)
-#define f_le_p(x,y) rb_funcall(x, rb_intern("<="), 1, y)
-#define f_ge_p(x,y) rb_funcall(x, rb_intern(">="), 1, y)
-
-#define f_match(r,s) rb_funcall(r, rb_intern("match"), 1, s)
-#define f_aref(o,i) rb_funcall(o, rb_intern("[]"), 1, i)
-#define f_end(o,i) rb_funcall(o, rb_intern("end"), 1, i)
-
 #define issign(c) ((c) == '-' || (c) == '+')
 #undef isdigit
 #define isdigit(c) ((unsigned char)((c) - '0') <= 9u)
