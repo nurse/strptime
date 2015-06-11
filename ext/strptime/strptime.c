@@ -124,7 +124,7 @@ strptime_exec0(void **pc, const char *fmt, size_t flen,
 	const char *str, size_t slen)
 {
     size_t si = 0;
-    int year=1970, mon=1, mday=1, hour=0, min=0, sec=0, gmtoff=0;
+    int year=1970, mon=1, mday=1, hour=0, min=0, sec=0, subsec=0, scale=0, gmtoff=0;
     if (UNLIKELY(pc == NULL)) {
 	static const void *const insns_address_table[] = {
 LABEL_PTR(A), LABEL_PTR(B), LABEL_PTR(C), LABEL_PTR(D), LABEL_PTR(E),
@@ -184,7 +184,17 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
 	    fail();
 	ADD_PC(1);
 	END_INSN(M)} 
-    INSN_ENTRY(N){ END_INSN(N)}
+    INSN_ENTRY(N){
+	size_t l;
+	l = read_digits(&str[si], &subsec, 9);
+	if (!l) fail();
+	si += l;
+	scale = 1;
+	for (; l > 0; l--) {
+	    scale *= 10;
+	}
+	ADD_PC(1);
+	END_INSN(N)}
     INSN_ENTRY(O){ END_INSN(O)}
     INSN_ENTRY(P){ END_INSN(P)}
     INSN_ENTRY(Q){ END_INSN(Q)}
@@ -243,7 +253,7 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
     INSN_ENTRY(z){
 	const char *p0 = str + si;
 	int r;
-	size_t l;
+	size_t len;
 	if (*p0 == 'z') {
 	    gmtoff = 0;
 	    ADD_PC(1);
@@ -253,11 +263,12 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
 	READ_DIGITS(r, 2);
 	gmtoff = r * 60;
 	if (str[si] == ':') si++;
-	l = read_digits(&str[si], &r, 2);
-	if (l) {
-	    si += l;
+	len = read_digits(&str[si], &r, 2);
+	if (len) {
+	    si += len;
 	    gmtoff += r;
 	}
+	gmtoff *= 60;
 	if (*p0 == '-') gmtoff = -gmtoff;
 	ADD_PC(1);
 	END_INSN(z)}
@@ -279,6 +290,7 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
 	time_t t;
 	static time_t ct;
 	static struct tm cache;
+	VALUE v;
 	if (ct && cache.tm_year == tm.tm_year && cache.tm_mon == tm.tm_mon &&
 		cache.tm_mday == tm.tm_mday) {
 	    t = ct + (tm.tm_hour-cache.tm_hour)*3600 + (tm.tm_min-cache.tm_min)*60 +
@@ -288,9 +300,17 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
 	    ct = t = timegm(&tm);
 	    memcpy((void *)&cache, &tm, sizeof(struct tm));
 	}
-	t += gmtoff;
-	return rb_time_num_new(LONG2NUM(t), INT2FIX(0));
-	// return rb_funcallv(rb_cTime, rb_intern("utc"), argc, args);
+	t -= gmtoff;
+	if (subsec) {
+	    VALUE sv = rb_int2big(scale);
+	    v = rb_big_mul(sv, TIMET2NUM(t));
+	    v = rb_big_plus(rb_int2big(subsec), v);
+	    v = rb_rational_raw(v, sv);
+	}
+	else {
+	    v = LONG2NUM(t);
+	}
+	return rb_time_num_new(v, INT2FIX(gmtoff));
 	END_INSN(_5f)}
     END_INSNS_DISPATCH();
 

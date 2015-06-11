@@ -73,21 +73,32 @@ describe Strptime do
     expect{pr.exec("61")}.to raise_error(ArgumentError)
   end
 
+  it 'parses %N' do
+    pr = Strptime.new("%N")
+    expect(pr.exec("123").nsec).to eq(123000000)
+    expect(pr.exec("123456").nsec).to eq(123456000)
+    expect(pr.exec("123456").usec).to eq(123456)
+    expect(pr.exec("123456789").nsec).to eq(123456789)
+    expect{pr.exec("a")}.to raise_error(ArgumentError)
+  end
+
   it 'parses %Y%m%d%H%M%S with gmtoff' do
     pr = Strptime.new("%Y%m%d%H%M%S%z")
     expect(pr.exec("20150610102415+0").to_i).to eq(1433931855)
-    expect(pr.exec("20150610102415+9").to_i).to eq(1433931855+540)
-    expect(pr.exec("20150610102415+09").to_i).to eq(1433931855+540)
-    expect(pr.exec("20150610102415+09:00").to_i).to eq(1433931855+540)
-    expect(pr.exec("20150610102415+09:0").to_i).to eq(1433931855+540)
-    expect(pr.exec("20150610102415+0900").to_i).to eq(1433931855+540)
-    expect(pr.exec("20150610102415+090").to_i).to eq(1433931855+540)
-    expect(pr.exec("20150610102415-1901").to_i).to eq(1433931855-19*60-1)
+    expect(pr.exec("20150610102415+9").utc_offset).to eq(9*3600)
+    expect(pr.exec("20150610102415+9").to_i).to eq(1433931855-9*3600)
+    expect(pr.exec("20150610102415+09").to_i).to eq(1433931855-9*3600)
+    expect(pr.exec("20150610102415+09:00").to_i).to eq(1433931855-9*3600)
+    expect(pr.exec("20150610102415+09:0").to_i).to eq(1433931855-9*3600)
+    expect(pr.exec("20150610102415+0900").to_i).to eq(1433931855-9*3600)
+    expect(pr.exec("20150610102415+090").to_i).to eq(1433931855-9*3600)
+    expect(pr.exec("20150610102415-1901").to_i).to eq(1433931855+19*3600+60)
   end
 
   it 'parses %Y%m%d%H%M%S' do
     pr = Strptime.new("%Y%m%d%H%M%S")
-    h = pr.exec("20150610102415")
-    expect(h.to_i).to eq(1433931855)
+    expect(pr.exec("20150610102415").to_i).to eq(1433931855)
+    expect(pr.exec("20150610102415").utc_offset).to eq(0)
+    expect(pr.exec("20150610102415").utc_offset).to eq(0)
   end
 end
