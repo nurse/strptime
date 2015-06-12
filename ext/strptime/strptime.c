@@ -683,6 +683,12 @@ get_new_strptimeval(VALUE obj)
     return tobj;
 }
 
+/*
+ *  call-seq:
+ *     Strptime.new(format) -> object
+ *
+ * returns parser object
+ */
 static VALUE
 strptime_init(VALUE self, VALUE fmt)
 {
@@ -733,6 +739,12 @@ PACKED_STRUCT_UNALIGNED(struct time_object {
     uint8_t tm_got:1;
 });
 
+/*
+ *  call-seq:
+ *     Strptime#exec(str) -> time
+ *
+ *
+ */
 static VALUE
 strptime_exec(VALUE self, VALUE str)
 {
@@ -760,6 +772,12 @@ strptime_exec(VALUE self, VALUE str)
     }
 }
 
+/*
+ *  call-seq:
+ *     Strptime#execi(str) -> integer
+ *
+ * returns epoch as integer
+ */
 static VALUE
 strptime_execi(VALUE self, VALUE str)
 {
@@ -775,6 +793,12 @@ strptime_execi(VALUE self, VALUE str)
     return TIMET2NUM(t);
 }
 
+/*
+ *  call-seq:
+ *     Strptime#source -> string
+ *
+ * returns source format string
+ */
 static VALUE
 strptime_source(VALUE self)
 {
@@ -784,6 +808,13 @@ strptime_source(VALUE self)
     return tobj->fmt;
 }
 
+/*
+ *  Strptime is a faster way to parse time strings.
+ *
+ *    parser = Strptime.new('%Y-%m-%dT%H:%M:%S%z')
+ *    parser.exec('2015-12-25T12:34:56+09') #=> 2015-12-25 12:34:56 +09:00
+ *    parser.execi('2015-12-25T12:34:56+09') #=> 1451014496
+ */
 void
 Init_strptime(void)
 {
