@@ -127,7 +127,7 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
 
   first:
     INSN_DISPATCH();
-    INSN_ENTRY(A){ END_INSN(A)}
+    INSN_ENTRY(A){ ADD_PC(1); END_INSN(A)}
     INSN_ENTRY(B){
 	int i;
 	for (i = 0; i < (int)sizeof_array(month_names); i++) {
@@ -141,11 +141,11 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
 	}
 	fail();
 	}
-    INSN_ENTRY(C){ END_INSN(C)}
-    INSN_ENTRY(D){ END_INSN(D)}
-    INSN_ENTRY(E){ END_INSN(E)}
-    INSN_ENTRY(F){ END_INSN(F)}
-    INSN_ENTRY(G){ END_INSN(G)}
+    INSN_ENTRY(C){ ADD_PC(1); END_INSN(C)}
+    INSN_ENTRY(D){ ADD_PC(1); END_INSN(D)}
+    INSN_ENTRY(E){ ADD_PC(1); END_INSN(E)}
+    INSN_ENTRY(F){ ADD_PC(1); END_INSN(F)}
+    INSN_ENTRY(G){ ADD_PC(1); END_INSN(G)}
     INSN_ENTRY(H){
 	if (str[si] == ' ') {
 	    si++;
@@ -157,8 +157,8 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
 	    fail();
 	ADD_PC(1);
 	END_INSN(H)}
-    INSN_ENTRY(I){ END_INSN(I)}
-    INSN_ENTRY(L){ END_INSN(L)}
+    INSN_ENTRY(I){ ADD_PC(1); END_INSN(I)}
+    INSN_ENTRY(L){ ADD_PC(1); END_INSN(L)}
     INSN_ENTRY(M){
 	READ_DIGITS(min, 2);
 	if (!valid_range_p(min, 0, 59))
@@ -175,21 +175,21 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
 	}
 	ADD_PC(1);
 	END_INSN(N)}
-    INSN_ENTRY(O){ END_INSN(O)}
-    INSN_ENTRY(P){ END_INSN(P)}
-    INSN_ENTRY(Q){ END_INSN(Q)}
-    INSN_ENTRY(R){ END_INSN(R)}
+    INSN_ENTRY(O){ ADD_PC(1); END_INSN(O)}
+    INSN_ENTRY(P){ ADD_PC(1); END_INSN(P)}
+    INSN_ENTRY(Q){ ADD_PC(1); END_INSN(Q)}
+    INSN_ENTRY(R){ ADD_PC(1); END_INSN(R)}
     INSN_ENTRY(S){
 	READ_DIGITS(sec, 2);
 	if (!valid_range_p(sec, 0, 60))
 	    fail();
 	ADD_PC(1);
 	END_INSN(S)}
-    INSN_ENTRY(T){ END_INSN(T)}
-    INSN_ENTRY(U){ END_INSN(U)}
-    INSN_ENTRY(V){ END_INSN(V)}
-    INSN_ENTRY(W){ END_INSN(W)}
-    INSN_ENTRY(X){ END_INSN(X)}
+    INSN_ENTRY(T){ ADD_PC(1); END_INSN(T)}
+    INSN_ENTRY(U){ ADD_PC(1); END_INSN(U)}
+    INSN_ENTRY(V){ ADD_PC(1); END_INSN(V)}
+    INSN_ENTRY(W){ ADD_PC(1); END_INSN(W)}
+    INSN_ENTRY(X){ ADD_PC(1); END_INSN(X)}
     INSN_ENTRY(Y){
 	char c = str[si];
 	if (issign(c)) si++;
@@ -197,9 +197,9 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
 	if (c == '-') year *= -1;
 	ADD_PC(1);
 	END_INSN(Y)}
-    INSN_ENTRY(Z){ END_INSN(Z)}
-    INSN_ENTRY(a){ END_INSN(a)}
-    INSN_ENTRY(c){ END_INSN(c)}
+    INSN_ENTRY(Z){ ADD_PC(1); END_INSN(Z)}
+    INSN_ENTRY(a){ ADD_PC(1); END_INSN(a)}
+    INSN_ENTRY(c){ ADD_PC(1); END_INSN(c)}
     INSN_ENTRY(d){
 	if (str[si] == ' ') {
 	    si++;
@@ -211,25 +211,27 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
 	    fail();
 	ADD_PC(1);
     END_INSN(d)}
-    INSN_ENTRY(g){ END_INSN(g)}
-    INSN_ENTRY(j){ END_INSN(j)}
-    INSN_ENTRY(l){ END_INSN(l)}
+    INSN_ENTRY(g){ ADD_PC(1); END_INSN(g)}
+    INSN_ENTRY(j){ ADD_PC(1); END_INSN(j)}
+    INSN_ENTRY(l){ ADD_PC(1); END_INSN(l)}
     INSN_ENTRY(m){
 	READ_DIGITS(mon, 2);
 	if (!valid_range_p(mon, 1, 12))
 	    fail();
 	ADD_PC(1);
     END_INSN(m)}
-    INSN_ENTRY(n){ END_INSN(n)}
-    INSN_ENTRY(p){ END_INSN(p)}
-    INSN_ENTRY(r){ END_INSN(r)}
-    INSN_ENTRY(s){ END_INSN(s)}
-    INSN_ENTRY(t){ END_INSN(t)}
-    INSN_ENTRY(u){ END_INSN(u)}
-    INSN_ENTRY(v){ END_INSN(v)}
-    INSN_ENTRY(w){ END_INSN(w)}
-    INSN_ENTRY(x){ END_INSN(x)}
-    INSN_ENTRY(y){ END_INSN(y)}
+    INSN_ENTRY(n){
+	ADD_PC(1);
+	END_INSN(n)}
+    INSN_ENTRY(p){ ADD_PC(1); END_INSN(p)}
+    INSN_ENTRY(r){ ADD_PC(1); END_INSN(r)}
+    INSN_ENTRY(s){ ADD_PC(1); END_INSN(s)}
+    INSN_ENTRY(t){ ADD_PC(1); END_INSN(t)}
+    INSN_ENTRY(u){ ADD_PC(1); END_INSN(u)}
+    INSN_ENTRY(v){ ADD_PC(1); END_INSN(v)}
+    INSN_ENTRY(w){ ADD_PC(1); END_INSN(w)}
+    INSN_ENTRY(x){ ADD_PC(1); END_INSN(x)}
+    INSN_ENTRY(y){ ADD_PC(1); END_INSN(y)}
     INSN_ENTRY(z){
 	const char *p0 = str + si;
 	int r;
@@ -252,9 +254,9 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
 	if (*p0 == '-') gmtoff = -gmtoff;
 	ADD_PC(1);
 	END_INSN(z)}
-    INSN_ENTRY(_25){ END_INSN(_25)}
-    INSN_ENTRY(_2b){ END_INSN(_2b)}
-    INSN_ENTRY(_3a){ END_INSN(_3a)}
+    INSN_ENTRY(_25){ ADD_PC(1); END_INSN(_25)}
+    INSN_ENTRY(_2b){ ADD_PC(1); END_INSN(_2b)}
+    INSN_ENTRY(_3a){ ADD_PC(1); END_INSN(_3a)}
     INSN_ENTRY(_60){
 	size_t v = (size_t)GET_OPERAND(1);
 	size_t fi = v & 0xFFFF;
