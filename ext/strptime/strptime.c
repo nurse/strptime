@@ -147,12 +147,7 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
     INSN_ENTRY(F){ ADD_PC(1); END_INSN(F)}
     INSN_ENTRY(G){ ADD_PC(1); END_INSN(G)}
     INSN_ENTRY(H){
-	if (str[si] == ' ') {
-	    si++;
-	    READ_DIGITS(hour, 1);
-	} else {
-	    READ_DIGITS(hour, 2);
-	}
+	READ_DIGITS(hour, 2);
 	if (!valid_range_p(hour, 0, 23))
 	    fail();
 	ADD_PC(1);
@@ -201,12 +196,7 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
     INSN_ENTRY(a){ ADD_PC(1); END_INSN(a)}
     INSN_ENTRY(c){ ADD_PC(1); END_INSN(c)}
     INSN_ENTRY(d){
-	if (str[si] == ' ') {
-	    si++;
-	    READ_DIGITS(mday, 1);
-	} else {
-	    READ_DIGITS(mday, 2);
-	}
+	READ_DIGITS(mday, 2);
 	if (!valid_range_p(mday, 1, 31))
 	    fail();
 	ADD_PC(1);
