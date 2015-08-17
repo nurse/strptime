@@ -220,7 +220,11 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
 	    fail();
 	ADD_PC(1);
     END_INSN(m)}
-    INSN_ENTRY(n){ END_INSN(n)}
+    INSN_ENTRY(n){
+  while (ISSPACE((unsigned char)str[si])
+      si++;
+  ADD_PC(1);
+    END_INSN(n)}
     INSN_ENTRY(p){ END_INSN(p)}
     INSN_ENTRY(r){ END_INSN(r)}
     INSN_ENTRY(s){ END_INSN(s)}
