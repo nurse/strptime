@@ -266,7 +266,6 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
 	time_t t;
 	static time_t ct;
 	static struct tm cache;
-	VALUE v;
 	if (ct && cache.tm_year == tm.tm_year && cache.tm_mon == tm.tm_mon &&
 		cache.tm_mday == tm.tm_mday) {
 	    t = ct + (tm.tm_hour-cache.tm_hour)*3600 + (tm.tm_min-cache.tm_min)*60 +
@@ -296,8 +295,8 @@ strptime_compile(const char *fmt, size_t flen)
     void **isns0 = ALLOC_N(void*, flen+2);
     void **isns = isns0;
     void **insns_address_table;
-    strptime_exec0((void**)&insns_address_table, NULL, NULL, 0, NULL, NULL, NULL);
     void *tmp;
+    strptime_exec0((void**)&insns_address_table, NULL, NULL, 0, NULL, NULL, NULL);
 
     while (fi < flen) {
 	switch (fmt[fi]) {
