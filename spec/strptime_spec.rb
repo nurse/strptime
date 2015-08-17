@@ -29,9 +29,8 @@ describe Strptime do
   end
 
   it 'parses %d' do
-    pr = Strptime.new("%d")
-    h = pr.exec("31")
-    expect(h.mday).to eq(31)
+    expect(Strptime.new("%d").exec("31").mday).to eq(31)
+    expect(Strptime.new(" %d").exec(" 31").mday).to eq(31)
   end
 
   it 'parses %B' do

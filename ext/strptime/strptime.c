@@ -221,6 +221,25 @@ LABEL_PTR(u), LABEL_PTR(v), LABEL_PTR(w), LABEL_PTR(x), LABEL_PTR(y), LABEL_PTR(
 	ADD_PC(1);
     END_INSN(m)}
     INSN_ENTRY(n){
+	const char *p0 = str + si;
+	const char *p = p0;
+	for (;;) {
+	    switch (*p) {
+	      case '\0':
+	      case ' ':
+	      case '\t':
+	      case '\n':
+	      case '\v':
+	      case '\f':
+	      case '\r':
+		p++;
+		break;
+	      default:
+		goto found_non_whitespace;
+	    }
+	}
+found_non_whitespace:
+	si += p - p0;
 	ADD_PC(1);
 	END_INSN(n)}
     INSN_ENTRY(p){ ADD_PC(1); END_INSN(p)}
