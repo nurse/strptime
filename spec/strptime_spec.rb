@@ -100,4 +100,11 @@ describe Strptime do
     expect(pr.exec("20150610102415").utc_offset).to eq(0)
     expect(pr.exec("20150610102415").utc_offset).to eq(0)
   end
+
+  it 'parses %Y-%m-%d %H:%M:%S' do
+    pr = Strptime.new("%Y-%m-%d %H:%M:%S")
+    expect(pr.exec("2015-06-10 10:24:15").to_i).to eq(1433931855)
+    expect(pr.exec("2015-06-10 10:24:15").utc_offset).to eq(0)
+    expect(pr.exec("2015-06-10 10:24:15").utc_offset).to eq(0)
+  end
 end
