@@ -402,6 +402,7 @@ strptime_init(VALUE self, VALUE fmt)
 {
     struct strptime_object *tobj;
     void **isns;
+    StringValue(fmt);
     TypedData_Get_Struct(self, struct strptime_object, &strptime_data_type, tobj);
     isns = strptime_compile(RSTRING_PTR(fmt), RSTRING_LEN(fmt));
     tobj->isns = isns;
@@ -452,6 +453,7 @@ strptime_exec(VALUE self, VALUE str)
     struct strptime_object *tobj;
     time_t t;
     int r, nsec=0, gmtoff=0;
+    StringValue(str);
     GetStrptimeval(self, tobj);
 
     r = strptime_exec0(tobj->isns, RSTRING_PTR(tobj->fmt),
@@ -478,6 +480,7 @@ strptime_execi(VALUE self, VALUE str)
     struct strptime_object *tobj;
     time_t t;
     int r, subsec=0, gmtoff=0;
+    StringValue(str);
     GetStrptimeval(self, tobj);
 
     r = strptime_exec0(tobj->isns, RSTRING_PTR(tobj->fmt),
