@@ -169,4 +169,8 @@ describe Strptime do
     expect(pr.exec('20010203 -0200').sec).to eq(0)
     expect(pr.exec('20010203 -0200').utc_offset).to eq(-7200)
   end
+
+  it 'raises when taking %A' do
+    expect{Strptime.new('%A')}.to raise_error(ArgumentError)
+  end
 end
