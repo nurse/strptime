@@ -589,16 +589,30 @@ strptime_compile(const char *fmt, size_t flen)
 	  case '%':
 	    fi++;
 	    c = fmt[fi];
-	    if ('A' <= c && c <= 'z') {
-		tmp = insns_address_table[c-'A'];
-		if (tmp) {
-		    *isns++ = tmp;
-		    fi++;
-		    continue;
-		}
-	    }
-	    rb_raise(rb_eArgError, "invalid format");
-	    break;
+      switch(c) {
+        case 'B':
+        case 'H':
+        case 'M':
+        case 'N':
+        case 'S':
+        case 'Y':
+        case 'b':
+        case 'd':
+        case 'e':
+        case 'h':
+        case 'm':
+        case 'n':
+        case 'z':
+          tmp = insns_address_table[c-'A'];
+          if (tmp) {
+            *isns++ = tmp;
+            fi++;
+            continue;
+          }
+        default:
+          rb_raise(rb_eArgError, "invalid format");
+          break;
+      }
 	  case ' ':
 	  case '\t':
 	  case '\n':
