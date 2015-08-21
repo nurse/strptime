@@ -96,15 +96,77 @@ describe Strptime do
 
   it 'parses %Y%m%d%H%M%S' do
     pr = Strptime.new("%Y%m%d%H%M%S")
-    expect(pr.exec("20150610102415").to_i).to eq(1433931855)
-    expect(pr.exec("20150610102415").utc_offset).to eq(0)
-    expect(pr.exec("20150610102415").utc_offset).to eq(0)
+    expect(pr.exec("20150610102415").utc_offset).to eq(Time.now.utc_offset)
   end
 
   it 'parses %Y-%m-%d %H:%M:%S' do
     pr = Strptime.new("%Y-%m-%d %H:%M:%S")
-    expect(pr.exec("2015-06-10 10:24:15").to_i).to eq(1433931855)
-    expect(pr.exec("2015-06-10 10:24:15").utc_offset).to eq(0)
-    expect(pr.exec("2015-06-10 10:24:15").utc_offset).to eq(0)
+    expect(pr.exec("2015-06-11 10:24:15").year).to eq(2015)
+    expect(pr.exec("2015-06-11 10:24:15").month).to eq(6)
+    expect(pr.exec("2015-06-11 10:24:15").day).to eq(11)
+    expect(pr.exec("2015-06-11 10:24:15").hour).to eq(10)
+    expect(pr.exec("2015-06-11 10:24:15").min).to eq(24)
+    expect(pr.exec("2015-06-11 10:24:15").sec).to eq(15)
+    expect(pr.exec("2015-06-11 10:24:15").nsec).to eq(0)
+    expect(pr.exec("2015-06-11 10:24:15").utc_offset).to eq(Time.now.utc_offset)
+  end
+
+  it 'parses %d' do
+    pr = Strptime.new("%d")
+    expect(pr.exec("10").year).to eq(Time.now.year)
+    expect(pr.exec("10").month).to eq(Time.now.month)
+    expect(pr.exec("10").day).to eq(10)
+    expect(pr.exec("10").hour).to eq(0)
+    expect(pr.exec("10").min).to eq(0)
+    expect(pr.exec("10").sec).to eq(0)
+    expect(pr.exec("10").nsec).to eq(0)
+    expect(pr.exec("10").utc_offset).to eq(Time.now.utc_offset)
+  end
+
+  it 'parses %S%z' do
+    pr = Strptime.new("%S%z")
+    expect(pr.exec("12-03:00").year).to eq(Time.now.localtime("-03:00").year)
+    expect(pr.exec("12-03:00").month).to eq(Time.now.localtime("-03:00").month)
+    expect(pr.exec("12-03:00").day).to eq(Time.now.localtime("-03:00").day)
+    expect(pr.exec("12-03:00").hour).to eq(Time.now.localtime("-03:00").hour)
+    expect(pr.exec("12-03:00").min).to eq(Time.now.localtime("-03:00").min)
+    expect(pr.exec("12-03:00").sec).to eq(12)
+    expect(pr.exec("12-03:00").nsec).to eq(0)
+    expect(pr.exec("12-03:00").utc_offset).to eq(-3*3600)
+
+    expect(pr.exec("12+09:00").year).to eq(Time.now.localtime("+09:00").year)
+    expect(pr.exec("12+09:00").month).to eq(Time.now.localtime("+09:00").month)
+    expect(pr.exec("12+09:00").day).to eq(Time.now.localtime("+09:00").day)
+    expect(pr.exec("12+09:00").hour).to eq(Time.now.localtime("+09:00").hour)
+    expect(pr.exec("12+09:00").min).to eq(Time.now.localtime("+09:00").min)
+    expect(pr.exec("12+09:00").sec).to eq(12)
+    expect(pr.exec("12+09:00").nsec).to eq(0)
+    expect(pr.exec("12+09:00").utc_offset).to eq(9*3600)
+
+    expect(pr.exec("12+11:00").year).to eq(Time.now.localtime("+11:00").year)
+    expect(pr.exec("12+11:00").month).to eq(Time.now.localtime("+11:00").month)
+    expect(pr.exec("12+11:00").day).to eq(Time.now.localtime("+11:00").day)
+    expect(pr.exec("12+11:00").hour).to eq(Time.now.localtime("+11:00").hour)
+    expect(pr.exec("12+11:00").min).to eq(Time.now.localtime("+11:00").min)
+    expect(pr.exec("12+11:00").sec).to eq(12)
+    expect(pr.exec("12+11:00").nsec).to eq(0)
+    expect(pr.exec("12+11:00").utc_offset).to eq(11*3600)
+  end
+
+  ## from test/test_time.rb
+  it 'parses empty format' do
+    expect{Strptime.new("").exec("")}.to raise_error(ArgumentError)
+    expect{Strptime.new("%z").exec("+09:00")}.to raise_error(ArgumentError)
+  end
+
+  it 'parses %Y%d%m %z' do
+    pr = Strptime.new('%Y%m%d %z')
+    expect(pr.exec('20010203 -0200').year).to eq(2001)
+    expect(pr.exec('20010203 -0200').mon).to eq(2)
+    expect(pr.exec('20010203 -0200').day).to eq(3)
+    expect(pr.exec('20010203 -0200').hour).to eq(0)
+    expect(pr.exec('20010203 -0200').min).to eq(0)
+    expect(pr.exec('20010203 -0200').sec).to eq(0)
+    expect(pr.exec('20010203 -0200').utc_offset).to eq(-7200)
   end
 end
