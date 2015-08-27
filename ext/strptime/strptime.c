@@ -827,9 +827,12 @@ static const rb_data_type_t strptime_data_type = {
     {
 	strptime_mark, RUBY_TYPED_DEFAULT_FREE, strptime_memsize,
     },
+#ifdef RUBY_TYPED_FREE_IMMEDIATELY
     0,
     0,
-    RUBY_TYPED_FREE_IMMEDIATELY};
+    RUBY_TYPED_FREE_IMMEDIATELY
+#endif
+};
 
 static VALUE
 strptime_s_alloc(VALUE klass)
@@ -904,6 +907,9 @@ strptime_init_copy(VALUE copy, VALUE self)
 
 typedef uint64_t WIDEVALUE;
 typedef WIDEVALUE wideval_t;
+#ifndef PACKED_STRUCT_UNALIGNED
+# define PACKED_STRUCT_UNALIGNED(x) x
+#endif
 PACKED_STRUCT_UNALIGNED(struct vtm {
     VALUE year;	/* 2000 for example.  Integer. */
     VALUE subsecx;     /* 0 <= subsecx < TIME_SCALE.  possibly Rational. */

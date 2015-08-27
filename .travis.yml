@@ -1,3 +1,10 @@
 language: ruby
 rvm:
-  - 2.2.2
+  - 2.0.0-p647
+  - 2.0.0-p647-clang
+  - 2.1.7
+  - 2.1.7-clang
+  - 2.2.3
+  - 2.2.3-clang
+  - ruby-head
+  - ruby-head-clang
