@@ -7,6 +7,7 @@ task :default => [:compile, :spec]
 require "rake/extensiontask"
 
 task :build => :compile
+task :spec => :compile
 
 Rake::ExtensionTask.new("strptime") do |ext|
   ext.lib_dir = "lib/strptime"
