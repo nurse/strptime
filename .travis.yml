@@ -1,4 +1,7 @@
 language: ruby
+os:
+  - linux
+  - osx
 rvm:
   - 2.0.0-p647
   - 2.0.0-p647-clang
