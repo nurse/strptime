@@ -339,12 +339,12 @@ tm_add_offset(struct tm *tm, long diff)
 
 static int
 strptime_exec0(void **pc, const char *fmt, const char *str, size_t slen,
-	       time_t *timep, int *nsecp, int *gmtoffp)
+	       struct timespec *tsp, int *gmtoffp)
 {
     size_t si = 0;
     int year = INT_MAX, mon = -1, mday = -1, hour = -1, min = -1, sec = -1,
 	nsec = 0, gmtoff = INT_MAX;
-    if (UNLIKELY(timep == NULL)) {
+    if (UNLIKELY(tsp == NULL)) {
 	static const void *const insns_address_table[] = {
 	    LABEL_PTR(A),   LABEL_PTR(B), LABEL_PTR(C),   LABEL_PTR(D),
 	    LABEL_PTR(E),   LABEL_PTR(F), LABEL_PTR(G),   LABEL_PTR(H),
@@ -729,8 +729,8 @@ first:
 	    }
 	    t -= gmtoff;
 	}
-	*timep = t;
-	*nsecp = nsec;
+	tsp->tv_sec = t;
+	tsp->tv_nsec = nsec;
 	*gmtoffp = gmtoff;
 	return 0;
 	END_INSN(_5f)
@@ -751,8 +751,7 @@ strptime_compile(const char *fmt, size_t flen)
     void **isns = isns0;
     void **insns_address_table;
     void *tmp;
-    strptime_exec0((void **)&insns_address_table, NULL, NULL, 0, NULL, NULL,
-		   NULL);
+    strptime_exec0((void **)&insns_address_table, NULL, NULL, 0, NULL, NULL);
 
     while (fi < flen) {
 	switch (fmt[fi]) {
@@ -944,27 +943,15 @@ static VALUE
 strptime_exec(VALUE self, VALUE str)
 {
     struct strptime_object *tobj;
-    time_t t;
-    int r, nsec = 0, gmtoff = 0;
+    int r, gmtoff = 0;
     StringValue(str);
     GetStrptimeval(self, tobj);
+    struct timespec ts;
 
     r = strptime_exec0(tobj->isns, RSTRING_PTR(tobj->fmt), RSTRING_PTR(str),
-		       RSTRING_LEN(str), &t, &nsec, &gmtoff);
+		       RSTRING_LEN(str), &ts, &gmtoff);
     if (r) rb_raise(rb_eArgError, "string doesn't match");
-    if (nsec) {
-	VALUE obj = rb_time_nano_new(t, nsec);
-	struct time_object *tobj = DATA_PTR(obj);
-	tobj->tm_got = 0;
-	tobj->gmt = 2;
-	tobj->vtm.utc_offset = INT2FIX(gmtoff);
-	tobj->vtm.zone = NULL;
-
-	return obj;
-    }
-    else {
-	return rb_time_num_new(TIMET2NUM(t), INT2FIX(gmtoff));
-    }
+    return timespec_new(&ts, gmtoff);
 }
 
 /*
@@ -977,15 +964,15 @@ static VALUE
 strptime_execi(VALUE self, VALUE str)
 {
     struct strptime_object *tobj;
-    time_t t;
-    int r, subsec = 0, gmtoff = 0;
+    struct timespec ts;
+    int r, gmtoff = 0;
     StringValue(str);
     GetStrptimeval(self, tobj);
 
     r = strptime_exec0(tobj->isns, RSTRING_PTR(tobj->fmt), RSTRING_PTR(str),
-		       RSTRING_LEN(str), &t, &subsec, &gmtoff);
+		       RSTRING_LEN(str), &ts, &gmtoff);
     if (r) rb_raise(rb_eArgError, "string doesn't match");
-    return TIMET2NUM(t);
+    return TIMET2NUM(ts.tv_sec);
 }
 
 /*
