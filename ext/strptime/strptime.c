@@ -179,13 +179,10 @@ static const int leap_year_days_in_month[] = {31, 29, 31, 30, 31, 30,
 					      31, 31, 30, 31, 30, 31};
 
 static void
-getnow(int *n_year, int *n_mon, int *n_mday, int *n_hour, int *n_min,
-       int *n_sec, int *n_nsec, long *n_gmtoff)
+timespec_now(struct timespec *ts)
 {
-    struct timespec ts;
-
 #ifdef HAVE_CLOCK_GETTIME
-    if (clock_gettime(CLOCK_REALTIME, &ts) == -1) {
+    if (clock_gettime(CLOCK_REALTIME, ts) == -1) {
 	rb_sys_fail("clock_gettime");
     }
 #else
@@ -194,47 +191,27 @@ getnow(int *n_year, int *n_mon, int *n_mday, int *n_hour, int *n_min,
 	if (gettimeofday(&tv, 0) < 0) {
 	    rb_sys_fail("gettimeofday");
 	}
-	ts.tv_sec = tv.tv_sec;
-	ts.tv_nsec = tv.tv_usec * 1000;
+	ts->tv_sec = tv.tv_sec;
+	ts->tv_nsec = tv.tv_usec * 1000;
     }
 #endif
+}
 
-    *n_nsec = ts.tv_nsec;
+static struct tm *
+localtime_with_gmtoff_zone(const time_t *t, struct tm *result, long *gmtoff,
+			   const char **zone)
+{
+    struct tm tm;
 
-    static time_t ct;
-    static struct tm cache;
-    static long cgmtoff;
-
-    if (ct && ct == ts.tv_sec) {
-	*n_year = cache.tm_year + 1900;
-	*n_mon = cache.tm_mon + 1;
-	*n_mday = cache.tm_mday;
-	*n_hour = cache.tm_hour;
-	*n_min = cache.tm_min;
-	*n_sec = cache.tm_sec;
-	*n_gmtoff = cgmtoff;
-    }
-    else {
-	struct tm tm;
-	LOCALTIME(&ts.tv_sec, tm);
-	*n_year = tm.tm_year + 1900;
-	*n_mon = tm.tm_mon + 1;
-	*n_mday = tm.tm_mday;
-	*n_hour = tm.tm_hour;
-	*n_min = tm.tm_min;
-	*n_sec = tm.tm_sec;
-
-	ct = ts.tv_sec;
-	memcpy((void *)&cache, &tm, sizeof(struct tm));
-
+    if (LOCALTIME(t, tm)) {
 #if defined(HAVE_STRUCT_TM_TM_GMTOFF)
-	cgmtoff = *n_gmtoff = tm.tm_gmtoff;
+	*gmtoff = tm.tm_gmtoff;
 #else
 	struct tm *u, *l;
 	long off;
 	struct tm tmbuf;
 	l = &tm;
-	u = GMTIME(&ts.tv_sec, tmbuf);
+	u = GMTIME(t, tmbuf);
 	if (!u) return NULL;
 	if (l->tm_year != u->tm_year)
 	    off = l->tm_year < u->tm_year ? -1 : 1;
@@ -247,8 +224,116 @@ getnow(int *n_year, int *n_mon, int *n_mday, int *n_hour, int *n_min,
 	off = off * 24 + l->tm_hour - u->tm_hour;
 	off = off * 60 + l->tm_min - u->tm_min;
 	off = off * 60 + l->tm_sec - u->tm_sec;
-	cgmtoff = *n_gmtoff = off;
+	*gmtoff = off;
 #endif
+
+	*result = tm;
+	return result;
+    }
+    return NULL;
+}
+
+static void
+tm_add_offset(struct tm *tm, long diff)
+{
+    int sign, tsec, tmin, thour, tday;
+
+    if (diff < 0) {
+	sign = -1;
+	diff = -diff;
+    }
+    else {
+	sign = 1;
+    }
+    tsec = diff % 60;
+    diff = diff / 60;
+    tmin = diff % 60;
+    diff = diff / 60;
+    thour = diff % 24;
+    diff = diff / 24;
+
+    if (sign < 0) {
+	tsec = -tsec;
+	tmin = -tmin;
+	thour = -thour;
+    }
+
+    tday = 0;
+
+    if (tsec) {
+	tsec += tm->tm_sec;
+	if (tsec < 0) {
+	    tsec += 60;
+	    tmin -= 1;
+	}
+	if (60 <= tsec) {
+	    tsec -= 60;
+	    tmin += 1;
+	}
+	tm->tm_sec = tsec;
+    }
+
+    if (tmin) {
+	tmin += tm->tm_min;
+	if (tmin < 0) {
+	    tmin += 60;
+	    thour -= 1;
+	}
+	if (60 <= tmin) {
+	    tmin -= 60;
+	    thour += 1;
+	}
+	tm->tm_min = tmin;
+    }
+
+    if (thour) {
+	thour += tm->tm_hour;
+	if (thour < 0) {
+	    thour += 24;
+	    tday = -1;
+	}
+	if (24 <= thour) {
+	    thour -= 24;
+	    tday = 1;
+	}
+	tm->tm_hour = thour;
+    }
+
+    if (tday) {
+	if (tday < 0) {
+	    if (tm->tm_mon == 1 && tm->tm_mday == 1) {
+		tm->tm_mday = 31;
+		tm->tm_mon = 12; /* December */
+		tm->tm_year = tm->tm_year - 1;
+	    }
+	    else if (tm->tm_mday == 1) {
+		const int *days_in_month = leap_year_p(tm->tm_year)
+					       ? leap_year_days_in_month
+					       : common_year_days_in_month;
+		tm->tm_mon--;
+		tm->tm_mday = days_in_month[tm->tm_mon - 1];
+	    }
+	    else {
+		tm->tm_mday--;
+	    }
+	}
+	else {
+	    int leap = leap_year_p(tm->tm_year);
+	    if (tm->tm_mon == 12 && tm->tm_mday == 31) {
+		tm->tm_year = tm->tm_year + 1;
+		tm->tm_mon = 1; /* January */
+		tm->tm_mday = 1;
+	    }
+	    else if (tm->tm_mday ==
+		     (leap ? leap_year_days_in_month
+			   : common_year_days_in_month)[tm->tm_mon - 1]) {
+		tm->tm_mon++;
+		tm->tm_mday = 1;
+	    }
+	    else {
+		tm->tm_mday++;
+	    }
+	}
     }
 }
 
@@ -257,8 +342,8 @@ strptime_exec0(void **pc, const char *fmt, const char *str, size_t slen,
 	       time_t *timep, int *nsecp, int *gmtoffp)
 {
     size_t si = 0;
-    int year = 10000, mon = -1, mday = -1, hour = -1, min = -1, sec = -1,
-	nsec = -1, gmtoff = 100000;
+    int year = INT_MAX, mon = -1, mday = -1, hour = -1, min = -1, sec = -1,
+	nsec = 0, gmtoff = INT_MAX;
     if (UNLIKELY(timep == NULL)) {
 	static const void *const insns_address_table[] = {
 	    LABEL_PTR(A),   LABEL_PTR(B), LABEL_PTR(C),   LABEL_PTR(D),
@@ -571,162 +656,80 @@ first:
     }
     INSN_ENTRY(_5f)
     {
-	if (year == 10000 && mon == -1 && mday == -1 && hour == -1 &&
-	    min == -1 && sec == -1 && nsec == -1) {
-	    rb_raise(rb_eArgError, "no time information in \"%s\"", str);
-	}
+	struct timespec ts;
+	struct tm tm;
+	time_t t;
 
-	int n_year, n_mon, n_mday, n_hour, n_min, n_sec, n_nsec;
-	long n_gmtoff;
-	getnow(&n_year, &n_mon, &n_mday, &n_hour, &n_min, &n_sec, &n_nsec,
-	       &n_gmtoff);
-
-	// convert now based on given gmtoff
-	if (gmtoff != 100000 && gmtoff != n_gmtoff) {
-	    int diff, sign, tsec, tmin, thour, tday;
-
-	    diff = gmtoff - n_gmtoff;
-	    if (diff < 0) {
-		sign = -1;
-		diff = -diff;
+	/* get current time with timezone */
+	timespec_now(&ts);
+	{
+	    static time_t ct;
+	    static struct tm ctm;
+	    static long cgmtoff;
+	    static long cloff;
+	    long off;
+	    if (ct == ts.tv_sec) {
+		off = cgmtoff;
 	    }
 	    else {
-		sign = 1;
+		ct = ts.tv_sec;
+		localtime_with_gmtoff_zone(&ct, &ctm, &off, NULL);
+		cloff = off;
+		cgmtoff = INT_MAX;
 	    }
-	    tsec = diff % 60;
-	    diff = diff / 60;
-	    tmin = diff % 60;
-	    diff = diff / 60;
-	    thour = diff % 24;
-	    diff = diff / 24;
-
-	    if (sign < 0) {
-		tsec = -tsec;
-		tmin = -tmin;
-		thour = -thour;
+	    if (gmtoff == INT_MAX) {
+		gmtoff = cloff;
 	    }
-
-	    tday = 0;
-
-	    if (tsec) {
-		tsec += n_sec;
-		if (tsec < 0) {
-		    tsec += 60;
-		    tmin -= 1;
-		}
-		if (60 <= tsec) {
-		    tsec -= 60;
-		    tmin += 1;
-		}
-		n_sec = tsec;
+	    if (gmtoff != off) {
+		tm_add_offset(&ctm, gmtoff - off);
 	    }
-
-	    if (tmin) {
-		tmin += n_min;
-		if (tmin < 0) {
-		    tmin += 60;
-		    thour -= 1;
-		}
-		if (60 <= tmin) {
-		    tmin -= 60;
-		    thour += 1;
-		}
-		n_min = tmin;
-	    }
-
-	    if (thour) {
-		thour += n_hour;
-		if (thour < 0) {
-		    thour += 24;
-		    tday = -1;
-		}
-		if (24 <= thour) {
-		    thour -= 24;
-		    tday = 1;
-		}
-		n_hour = thour;
-	    }
-
-	    if (tday) {
-		if (tday < 0) {
-		    if (n_mon == 1 && n_mday == 1) {
-			n_mday = 31;
-			n_mon = 12; /* December */
-			n_year = n_year - 1;
-		    }
-		    else if (n_mday == 1) {
-			const int *days_in_month =
-			    leap_year_p(n_year) ? leap_year_days_in_month
-						: common_year_days_in_month;
-			n_mon--;
-			n_mday = days_in_month[n_mon - 1];
-		    }
-		    else {
-			n_mday--;
-		    }
-		}
-		else {
-		    int leap = leap_year_p(n_year);
-		    if (n_mon == 12 && n_mday == 31) {
-			n_year = n_year + 1;
-			n_mon = 1; /* January */
-			n_mday = 1;
-		    }
-		    else if (n_mday ==
-			     (leap ? leap_year_days_in_month
-				   : common_year_days_in_month)[n_mon - 1]) {
-			n_mon++;
-			n_mday = 1;
-		    }
-		    else {
-			n_mday++;
-		    }
-		}
-	    }
+	    memcpy(&tm, &ctm, sizeof(struct tm));
+	    cgmtoff = gmtoff;
 	}
 
-	if (gmtoff == 100000) gmtoff = n_gmtoff;
-
-	if (year != 10000) goto finnow;
-	year = n_year;
-	if (mon != -1) goto finnow;
-	mon = n_mon;
-	if (mday != -1) goto finnow;
-	mday = n_mday;
-	if (hour != -1) goto finnow;
-	hour = n_hour;
-	if (min != -1) goto finnow;
-	min = n_min;
-	if (sec != -1) goto finnow;
-	sec = n_sec;
-	if (nsec != -1) goto finnow;
-	nsec = n_nsec;
-    finnow:
-
-	if (year == 10000) year = 1970;
-	if (mon == -1) mon = 1;
-	if (mday == -1) mday = 1;
-	if (hour == -1) hour = 0;
-	if (min == -1) min = 0;
-	if (sec == -1) sec = 0;
-	if (nsec == -1) nsec = 0;
-
-	// int argc = 6;
-	// VALUE args[] = {year, mon, mday, hour, min, sec};
-	struct tm tm = {sec, min, hour, mday, mon - 1, year - 1900};
-	time_t t;
-	static time_t ct;
-	static struct tm cache;
-	if (ct && cache.tm_year == tm.tm_year && cache.tm_mon == tm.tm_mon &&
-	    cache.tm_mday == tm.tm_mday) {
-	    t = ct + (tm.tm_hour - cache.tm_hour) * 3600 +
-		(tm.tm_min - cache.tm_min) * 60 + (tm.tm_sec - cache.tm_sec);
+	/* overwrite time */
+	if (year != INT_MAX) {
+	    tm.tm_year = year - 1900;
+	    if (mon == -1) mon = 1;
+	setmonth:
+	    tm.tm_mon = mon - 1;
+	    if (mday == -1) mday = 1;
+	setmday:
+	    tm.tm_mday = mday;
+	    if (hour == -1) hour = 0;
+	sethour:
+	    tm.tm_hour = hour;
+	    if (min == -1) min = 0;
+	setmin:
+	    tm.tm_min = min;
+	    if (sec == -1) sec = 0;
+	    tm.tm_sec = sec;
 	}
 	else {
-	    ct = t = timegm(&tm);
-	    memcpy((void *)&cache, &tm, sizeof(struct tm));
+	    if (mon != -1) goto setmonth;
+	    if (mday != -1) goto setmday;
+	    if (hour != -1) goto sethour;
+	    if (min != -1) goto setmin;
+	    if (sec != -1) tm.tm_sec = sec;
 	}
-	*timep = t - gmtoff;
+
+	{
+	    static time_t ct;
+	    static struct tm cache;
+	    /* struct tm to time_t */
+	    if (ct && cache.tm_year == tm.tm_year &&
+		cache.tm_mon == tm.tm_mon && cache.tm_mday == tm.tm_mday) {
+		t = ct + (tm.tm_hour - cache.tm_hour) * 3600 +
+		    (tm.tm_min - cache.tm_min) * 60 +
+		    (tm.tm_sec - cache.tm_sec);
+	    }
+	    else {
+		ct = t = timegm(&tm);
+		memcpy((void *)&cache, &tm, sizeof(struct tm));
+	    }
+	    t -= gmtoff;
+	}
+	*timep = t;
 	*nsecp = nsec;
 	*gmtoffp = gmtoff;
 	return 0;
@@ -908,7 +911,7 @@ strptime_init_copy(VALUE copy, VALUE self)
 typedef uint64_t WIDEVALUE;
 typedef WIDEVALUE wideval_t;
 #ifndef PACKED_STRUCT_UNALIGNED
-# define PACKED_STRUCT_UNALIGNED(x) x
+#define PACKED_STRUCT_UNALIGNED(x) x
 #endif
 PACKED_STRUCT_UNALIGNED(struct vtm {
     VALUE year;	/* 2000 for example.  Integer. */
