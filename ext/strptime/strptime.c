@@ -44,11 +44,6 @@ VALUE rb_cStrptime;
 
 #define NEXT_INSN() TC_DISPATCH(__NEXT_INSN__)
 
-static const char *day_names[] = {"Sunday",   "Monday", "Tuesday",  "Wednesday",
-				  "Thursday", "Friday", "Saturday", "Sun",
-				  "Mon",      "Tue",    "Wed",      "Thu",
-				  "Fri",      "Sat"};
-
 static const char *month_names[] = {
     "January", "February", "March",     "April",   "May",      "June",
     "July",    "August",   "September", "October", "November", "December",
