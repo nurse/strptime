@@ -11,3 +11,6 @@ rvm:
   - 2.2.3-clang
   - ruby-head
   - ruby-head-clang
+before_install:
+  - gem install bundler
+cache: bundler
