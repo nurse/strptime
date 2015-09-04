@@ -8,9 +8,8 @@
 /* rbtime_timespec_new */
 typedef uint64_t WIDEVALUE;
 typedef WIDEVALUE wideval_t;
-#ifndef PACKED_STRUCT_UNALIGNED
-#define PACKED_STRUCT_UNALIGNED(x) x
-#endif
+
+#ifdef PACKED_STRUCT_UNALIGNED
 PACKED_STRUCT_UNALIGNED(struct vtm {
     VALUE year;	/* 2000 for example.  Integer. */
     VALUE subsecx;     /* 0 <= subsecx < TIME_SCALE.  possibly Rational. */
@@ -31,16 +30,43 @@ PACKED_STRUCT_UNALIGNED(struct time_object {
     uint8_t gmt : 3; /* 0:utc 1:localtime 2:fixoff 3:init */
     uint8_t tm_got : 1;
 });
+#else
+struct vtm {
+    VALUE year; /* 2000 for example.  Integer. */
+    int mon; /* 1..12 */
+    int mday; /* 1..31 */
+    int hour; /* 0..23 */
+    int min; /* 0..59 */
+    int sec; /* 0..60 */
+    VALUE subsecx; /* 0 <= subsecx < TIME_SCALE.  possibly Rational. */
+    VALUE utc_offset; /* -3600 as -01:00 for example.  possibly Rational. */
+    int wday; /* 0:Sunday, 1:Monday, ..., 6:Saturday */
+    int yday; /* 1..366 */
+    int isdst; /* 0:StandardTime 1:DayLightSavingTime */
+    const char *zone; /* "JST", "EST", "EDT", etc. */
+};
+struct time_object {
+    wideval_t timew; /* time_t value * TIME_SCALE.  possibly Rational. */
+    struct vtm vtm;
+    int gmt; /* 0:utc 1:localtime 2:fixoff */
+    int tm_got;
+};
+#endif
 
+VALUE
+rb_time_succ(VALUE time);
 VALUE
 rbtime_timespec_new(const struct timespec *ts, int offset)
 {
     VALUE obj = rb_time_nano_new(ts->tv_sec, ts->tv_nsec);
-    struct time_object *tobj = DATA_PTR(obj);
-    tobj->tm_got = 0;
-    tobj->gmt = 2;
-    tobj->vtm.utc_offset = INT2FIX(offset);
-    tobj->vtm.zone = NULL;
+    if (offset) {
+	struct time_object *tobj;
+	tobj = DATA_PTR(obj);
+	tobj->tm_got = 0;
+	tobj->gmt = 2;
+	tobj->vtm.utc_offset = INT2FIX(offset);
+	tobj->vtm.zone = NULL;
+    }
     return obj;
 }
 

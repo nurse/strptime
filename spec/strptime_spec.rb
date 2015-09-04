@@ -91,7 +91,10 @@ describe Strptime do
     expect(pr.exec("20150610102415+09:0").to_i).to eq(1433931855-9*3600)
     expect(pr.exec("20150610102415+0900").to_i).to eq(1433931855-9*3600)
     expect(pr.exec("20150610102415+090").to_i).to eq(1433931855-9*3600)
-    expect(pr.exec("20150610102415-1401").to_i).to eq(1433931855+14*3600+60)
+    expect(pr.exec("20150610102415-0102").to_i).to eq(1433931855+1*3600+2*60)
+    expect(pr.exec("20150610102415-1200").to_i).to eq(1433931855+12*3600)
+    expect(pr.exec("20150610102415+1400").to_i).to eq(1433931855-14*3600)
+    expect(pr.exec("20150610102415-1200").to_i).to eq(1433931855+12*3600)
   end
 
   it 'parses %Y%m%d%H%M%S' do
