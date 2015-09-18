@@ -1,6 +1,8 @@
 # Strptime
 
 [![Build Status](https://travis-ci.org/nurse/strptime.png)](https://travis-ci.org/nurse/strptime)
+[![Build status](https://ci.appveyor.com/api/projects/status/9wr116l8uy1bdcxf/branch/master?svg=true)](https://ci.appveyor.com/project/nurse/strptime/branch/master)
+
 
 Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/strptime`. To experiment with that code, run `bin/console` for an interactive prompt.
 
