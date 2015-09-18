@@ -478,7 +478,7 @@ first:
 		    (tm.tm_sec - cache.tm_sec);
 	    }
 	    else {
-		ct = t = timegm(&tm);
+		ct = t = timegm_noleapsecond(&tm);
 		memcpy((void *)&cache, &tm, sizeof(struct tm));
 	    }
 	    t -= gmtoff;

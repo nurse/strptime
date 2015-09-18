@@ -1,3 +1,14 @@
+/**********************************************************************
+
+  time.c -
+
+  $Author$
+  created at: Tue Dec 28 14:31:59 JST 1993
+
+  Copyright (C) 1993-2007 Yukihiro Matsumoto
+
+**********************************************************************/
+
 #include "ruby.h"
 
 #include <time.h>
@@ -192,17 +203,76 @@ localtime_with_gmtoff_zone(const time_t *t, struct tm *result, long *gmtoff,
     return NULL;
 }
 
-/* tm_add_offset */
+#define NDIV(x,y) (-(-((x)+1)/(y))-1)
+#define DIV(n,d) ((n)<0 ? NDIV((n),(d)) : (n)/(d))
+
 static int
 leap_year_p(int y)
 {
     return ((y % 4 == 0) && (y % 100 != 0)) || (y % 400 == 0);
 }
 
-static const int common_year_days_in_month[] = {31, 28, 31, 30, 31, 30,
-						31, 31, 30, 31, 30, 31};
-static const int leap_year_days_in_month[] = {31, 29, 31, 30, 31, 30,
-					      31, 31, 30, 31, 30, 31};
+static const int common_year_yday_offset[] = {
+    -1,
+    -1 + 31,
+    -1 + 31 + 28,
+    -1 + 31 + 28 + 31,
+    -1 + 31 + 28 + 31 + 30,
+    -1 + 31 + 28 + 31 + 30 + 31,
+    -1 + 31 + 28 + 31 + 30 + 31 + 30,
+    -1 + 31 + 28 + 31 + 30 + 31 + 30 + 31,
+    -1 + 31 + 28 + 31 + 30 + 31 + 30 + 31 + 31,
+    -1 + 31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30,
+    -1 + 31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31,
+    -1 + 31 + 28 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30
+      /* 1    2    3    4    5    6    7    8    9    10   11 */
+};
+static const int leap_year_yday_offset[] = {
+    -1,
+    -1 + 31,
+    -1 + 31 + 29,
+    -1 + 31 + 29 + 31,
+    -1 + 31 + 29 + 31 + 30,
+    -1 + 31 + 29 + 31 + 30 + 31,
+    -1 + 31 + 29 + 31 + 30 + 31 + 30,
+    -1 + 31 + 29 + 31 + 30 + 31 + 30 + 31,
+    -1 + 31 + 29 + 31 + 30 + 31 + 30 + 31 + 31,
+    -1 + 31 + 29 + 31 + 30 + 31 + 30 + 31 + 31 + 30,
+    -1 + 31 + 29 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31,
+    -1 + 31 + 29 + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30
+      /* 1    2    3    4    5    6    7    8    9    10   11 */
+};
+
+static const int common_year_days_in_month[] = {
+    31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
+};
+static const int leap_year_days_in_month[] = {
+    31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
+};
+
+time_t
+timegm_noleapsecond(struct tm *tm)
+{
+    long tm_year = tm->tm_year;
+    int tm_yday = tm->tm_mday;
+    if (leap_year_p(tm_year + 1900))
+	tm_yday += leap_year_yday_offset[tm->tm_mon];
+    else
+	tm_yday += common_year_yday_offset[tm->tm_mon];
+
+    /*
+     *  `Seconds Since the Epoch' in SUSv3:
+     *  tm_sec + tm_min*60 + tm_hour*3600 + tm_yday*86400 +
+     *  (tm_year-70)*31536000 + ((tm_year-69)/4)*86400 -
+     *  ((tm_year-1)/100)*86400 + ((tm_year+299)/400)*86400
+     */
+    return tm->tm_sec + tm->tm_min*60 + tm->tm_hour*3600 +
+	   (time_t)(tm_yday +
+		    (tm_year-70)*365 +
+		    DIV(tm_year-69,4) -
+		    DIV(tm_year-1,100) +
+		    DIV(tm_year+299,400))*86400;
+}
 
 void
 tm_add_offset(struct tm *tm, long diff)
