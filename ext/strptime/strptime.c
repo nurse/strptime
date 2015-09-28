@@ -402,7 +402,13 @@ strptime_exec0(void **pc, const char *fmt, const char *str, size_t slen,
 	size_t v = (size_t)GET_OPERAND(1);
 	size_t fi = v & 0xFFFF;
 	size_t cnt = v >> 16;
-	if (memcmp(str + si, fmt + fi, cnt)) return Qnil;
+	/* optimize to short string instead of memcmp(3) */
+	const char *p = str + si;
+	const char *q = fmt + fi;
+	const char *qe = q + cnt;
+	for (; q < qe; p++,q++) {
+	    if (*p != *q) return Qnil;
+	}
 	pc += 2;
 	si += cnt;
 	END_INSN(_60)
