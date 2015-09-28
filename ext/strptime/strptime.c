@@ -419,26 +419,21 @@ first:
 	{
 	    static time_t ct;
 	    static struct tm ctm;
-	    static long cgmtoff;
-	    static long cloff;
-	    long off;
-	    if (ct == ts.tv_sec) {
-		off = cgmtoff;
-	    }
-	    else {
+	    static long ctmoff;
+	    static long localoff;
+	    if (ct != ts.tv_sec) {
 		ct = ts.tv_sec;
-		localtime_with_gmtoff_zone(&ct, &ctm, &off, NULL);
-		cloff = off;
-		cgmtoff = INT_MAX;
+		localtime_with_gmtoff_zone(&ct, &ctm, &ctmoff, NULL);
+		localoff = ctmoff;
 	    }
 	    if (gmtoff == INT_MAX) {
-		gmtoff = cloff;
+		gmtoff = localoff;
 	    }
-	    if (gmtoff != off) {
-		tm_add_offset(&ctm, gmtoff - off);
+	    if (gmtoff != ctmoff) {
+		tm_add_offset(&ctm, gmtoff - ctmoff);
+		ctmoff = gmtoff;
 	    }
 	    memcpy(&tm, &ctm, sizeof(struct tm));
-	    cgmtoff = gmtoff;
 	}
 
 	/* overwrite time */
@@ -467,22 +462,7 @@ first:
 	    if (sec != -1) tm.tm_sec = sec;
 	}
 
-	{
-	    static time_t ct;
-	    static struct tm cache;
-	    /* struct tm to time_t */
-	    if (ct && cache.tm_year == tm.tm_year &&
-		cache.tm_mon == tm.tm_mon && cache.tm_mday == tm.tm_mday) {
-		t = ct + (tm.tm_hour - cache.tm_hour) * 3600 +
-		    (tm.tm_min - cache.tm_min) * 60 +
-		    (tm.tm_sec - cache.tm_sec);
-	    }
-	    else {
-		ct = t = timegm_noleapsecond(&tm);
-		memcpy((void *)&cache, &tm, sizeof(struct tm));
-	    }
-	    t -= gmtoff;
-	}
+	t = timegm_noleapsecond(&tm) - gmtoff;
 	tsp->tv_sec = t;
 	tsp->tv_nsec = nsec;
 	*gmtoffp = gmtoff;
