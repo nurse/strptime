@@ -26,4 +26,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rake-compiler"
   spec.add_development_dependency 'rake-compiler-dock'
   spec.add_development_dependency "rspec"
+  spec.add_development_dependency 'yard'
 end

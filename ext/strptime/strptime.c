@@ -628,8 +628,8 @@ get_new_strptimeval(VALUE obj)
 }
 
 /*
- *  call-seq:
- *     Strptime.new(format) -> object
+ * @overload new(format)
+ *   @param format [String] strptime(3) style format string.
  *
  * returns parser object
  */
@@ -647,7 +647,9 @@ strptime_init(VALUE self, VALUE fmt)
     return self;
 }
 
-/* :nodoc: */
+/* @api private
+ * For Ruby VM internal.
+ */
 static VALUE
 strptime_init_copy(VALUE copy, VALUE self)
 {
@@ -688,9 +690,11 @@ PACKED_STRUCT_UNALIGNED(struct time_object {
 });
 
 /*
- *  call-seq:
- *     Strptime#exec(str) -> time
+ * @overload exec(str)
+ *   @param str [String] string to parse
+ * @return [Time] the time object given string means
  *
+ * Parse given string, and return Time object
  *
  */
 static VALUE
@@ -709,10 +713,11 @@ strptime_exec(VALUE self, VALUE str)
 }
 
 /*
- *  call-seq:
- *     Strptime#execi(str) -> integer
+ * @overload execi(str)
+ *   @param str [String] string to parse
+ * @return [Integer] the Unix epoch given string means
  *
- * returns epoch as integer
+ * Parse given string, and return epoch as integer
  */
 static VALUE
 strptime_execi(VALUE self, VALUE str)
@@ -730,10 +735,8 @@ strptime_execi(VALUE self, VALUE str)
 }
 
 /*
- *  call-seq:
- *     Strptime#source -> string
- *
- * returns source format string
+ * @overload source
+ * @return [String] source format string
  */
 static VALUE
 strptime_source(VALUE self)
@@ -745,9 +748,13 @@ strptime_source(VALUE self)
 }
 
 /*
- *  Strptime is a faster way to parse time strings.
+ * Document-class: Strptime
  *
+ * Strptime is a faster way to parse time strings like strptime(3).
+ *
+ * @example
  *    parser = Strptime.new('%Y-%m-%dT%H:%M:%S%z')
+ *    parser.source #=> "%Y-%m-%dT%H:%M:%S%z"
  *    parser.exec('2015-12-25T12:34:56+09') #=> 2015-12-25 12:34:56 +09:00
  *    parser.execi('2015-12-25T12:34:56+09') #=> 1451014496
  */

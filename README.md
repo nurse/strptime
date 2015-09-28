@@ -26,17 +26,16 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
-
-## Development
-
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `bin/console` for an interactive prompt that will allow you to experiment.
-
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release` to create a git tag for the version, push git commits and tags, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+```ruby
+require 'strptime'
+parser = Strptime.new('%Y-%m-%dT%H:%M:%S%z')
+parser.exec('2015-12-25T12:34:56+09') #=> 2015-12-25 12:34:56 +09:00
+parser.execi('2015-12-25T12:34:56+09') #=> 1451014496
+```
 
 ## Contributing
 
-1. Fork it ( https://github.com/[my-github-username]/strptime/fork )
+1. Fork it ( https://github.com/nurse/strptime/fork )
 2. Create your feature branch (`git checkout -b my-new-feature`)
 3. Commit your changes (`git commit -am 'Add some feature'`)
 4. Push to the branch (`git push origin my-new-feature`)

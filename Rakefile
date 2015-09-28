@@ -1,6 +1,7 @@
 require "bundler"
 Bundler::GemHelper.install_tasks
 require "rspec/core/rake_task"
+require 'yard'
 
 RSpec::Core::RakeTask.new(:spec)
 
@@ -9,6 +10,13 @@ require "rake/extensiontask"
 
 task :build => :compile
 task :spec => :compile
+
+desc 'Generate YARD document'
+YARD::Rake::YardocTask.new(:doc) do |t|
+  t.files   = ['ext/strptime/strptime.c']
+  t.options = []
+  t.options << '--debug' << '--verbose' if $trace
+end
 
 spec = eval File.read("strptime.gemspec")
 Rake::ExtensionTask.new("strptime", spec) do |ext|
