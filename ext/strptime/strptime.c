@@ -623,7 +623,7 @@ strptime_init(VALUE self, VALUE fmt)
 {
     struct strptime_object *tobj;
     void **isns;
-    StringValue(fmt);
+    StringValueCStr(fmt);
     TypedData_Get_Struct(self, struct strptime_object, &strptime_data_type,
 			 tobj);
     isns = strptime_compile(RSTRING_PTR(fmt), RSTRING_LEN(fmt));
