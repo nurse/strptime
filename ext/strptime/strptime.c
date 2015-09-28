@@ -120,7 +120,6 @@ strptime_exec0(void **pc, const char *fmt, const char *str, size_t slen,
 	return 0;
     }
 
-first:
     INSN_DISPATCH();
     INSN_ENTRY(A)
     {
@@ -473,7 +472,7 @@ first:
 
     /* unreachable */
     rb_bug("vm_eval: unreachable");
-    goto first;
+    UNREACHABLE;
 }
 
 void **
