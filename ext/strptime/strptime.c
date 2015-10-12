@@ -557,6 +557,13 @@ strptime_mark(void *ptr)
     rb_gc_mark(tobj->fmt);
 }
 
+static void
+strptime_free(void *ptr)
+{
+    struct strptime_object *tobj = ptr;
+    ruby_xfree(tobj->isns);
+}
+
 static size_t
 strptime_memsize(const void *tobj)
 {
@@ -566,7 +573,7 @@ strptime_memsize(const void *tobj)
 static const rb_data_type_t strptime_data_type = {
     "strptime",
     {
-	strptime_mark, RUBY_TYPED_DEFAULT_FREE, strptime_memsize,
+	strptime_mark, strptime_free, strptime_memsize,
     },
 #ifdef RUBY_TYPED_FREE_IMMEDIATELY
     0,
