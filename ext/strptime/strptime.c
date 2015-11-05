@@ -697,9 +697,9 @@ strptime_exec(VALUE self, VALUE str)
 {
     struct strptime_object *tobj;
     int r, gmtoff = 0;
+    struct timespec ts;
     StringValue(str);
     GetStrptimeval(self, tobj);
-    struct timespec ts;
 
     r = strptime_exec0(tobj->isns, RSTRING_PTR(tobj->fmt), RSTRING_PTR(str),
 		       RSTRING_LEN(str), &ts, &gmtoff);
