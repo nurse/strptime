@@ -24,10 +24,12 @@ describe Strptime do
 
   it 'parses %y' do
     pr = Strptime.new("%y")
-    expect(pr.exec("69").year).to eq(1969)
     expect(pr.exec("15").year).to eq(2015)
     expect(pr.exec("25").year).to eq(2025)
+    expect(pr.exec("70").year).to eq(1970)
+    pending "Windows doen't support negative time_t" if Gem.win_platform?
     expect(pr.exec("68").year).to eq(2068)
+    expect(pr.exec("69").year).to eq(1969)
   end
 
   it 'parses %m' do
