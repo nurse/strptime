@@ -22,6 +22,14 @@ describe Strptime do
     expect(pr.exec("2025").year).to eq(2025)
   end
 
+  it 'parses %y' do
+    pr = Strptime.new("%y")
+    expect(pr.exec("69").year).to eq(1969)
+    expect(pr.exec("15").year).to eq(2015)
+    expect(pr.exec("25").year).to eq(2025)
+    expect(pr.exec("68").year).to eq(2068)
+  end
+
   it 'parses %m' do
     pr = Strptime.new("%m")
     expect(pr.exec("12").mon).to eq(12)
@@ -180,5 +188,10 @@ describe Strptime do
 
   it 'raises when taking %A' do
     expect{Strptime.new('%A')}.to raise_error(ArgumentError)
+  end
+
+  it 'parses %Y%d%m %z' do
+    pr = Strptime.new('%m/%d/%y %H:%M')
+    expect(pr.exec('11/4/15 16:21')).to eq(Time.local(2015,11,4,16,21))
   end
 end

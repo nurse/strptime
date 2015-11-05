@@ -355,6 +355,8 @@ strptime_exec0(void **pc, const char *fmt, const char *str, size_t slen,
     }
     INSN_ENTRY(y)
     {
+	READ_DIGITS(year, 2);
+	year += year < 69 ? 2000 : 1900;
 	ADD_PC(1);
 	END_INSN(y)
     }
@@ -510,6 +512,7 @@ strptime_compile(const char *fmt, size_t flen)
 	    case 'h':
 	    case 'm':
 	    case 'n':
+	    case 'y':
 	    case 'z':
 		tmp = insns_address_table[c - 'A'];
 		if (tmp) {
