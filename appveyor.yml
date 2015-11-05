@@ -4,10 +4,8 @@ install:
   - ruby --version
   - gem --version
   - bundle install
-build: off
-test_script:
+build_script:
   - bundle exec rake -rdevkit
-
 environment:
   matrix:
     - ruby_version: "200"
