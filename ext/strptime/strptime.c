@@ -420,9 +420,10 @@ strptime_exec0(void **pc, const char *fmt, const char *str, size_t slen,
 	struct timespec ts;
 	struct tm tm;
 	time_t t;
+	int gmt = gmtoff >= INT_MAX-1 ? INT_MAX-gmtoff : 2;
 
 	/* get current time with timezone */
-	timespec_now(&ts);
+	rb_timespec_now(&ts);
 	{
 	    static time_t ct;
 	    static struct tm ctm;
@@ -435,6 +436,9 @@ strptime_exec0(void **pc, const char *fmt, const char *str, size_t slen,
 	    }
 	    if (gmtoff == INT_MAX) {
 		gmtoff = localoff;
+	    }
+	    else if (gmtoff == INT_MAX-1) {
+		gmtoff = 0;
 	    }
 	    if (gmtoff != ctmoff) {
 		tm_add_offset(&ctm, gmtoff - ctmoff);
@@ -469,7 +473,8 @@ strptime_exec0(void **pc, const char *fmt, const char *str, size_t slen,
 	    if (sec != -1) tm.tm_sec = sec;
 	}
 
-	t = timegm_noleapsecond(&tm) - gmtoff;
+	t = timegm_noleapsecond(&tm);
+	if (gmt != 1) t -= gmtoff;
 	tsp->tv_sec = t;
 	tsp->tv_nsec = nsec;
 	*gmtoffp = gmtoff;
@@ -696,7 +701,7 @@ static VALUE
 strptime_exec(VALUE self, VALUE str)
 {
     struct strptime_object *tobj;
-    int r, gmtoff = 0;
+    int r, gmtoff = INT_MAX;
     struct timespec ts;
     StringValue(str);
     GetStrptimeval(self, tobj);
@@ -704,7 +709,7 @@ strptime_exec(VALUE self, VALUE str)
     r = strptime_exec0(tobj->isns, RSTRING_PTR(tobj->fmt), RSTRING_PTR(str),
 		       RSTRING_LEN(str), &ts, &gmtoff);
     if (r) rb_raise(rb_eArgError, "string doesn't match");
-    return rbtime_timespec_new(&ts, gmtoff);
+    return rb_time_timespec_new(&ts, gmtoff);
 }
 
 /*
@@ -719,7 +724,7 @@ strptime_execi(VALUE self, VALUE str)
 {
     struct strptime_object *tobj;
     struct timespec ts;
-    int r, gmtoff = 0;
+    int r, gmtoff = INT_MAX;
     StringValue(str);
     GetStrptimeval(self, tobj);
 

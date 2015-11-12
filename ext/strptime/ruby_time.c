@@ -20,7 +20,8 @@
 typedef uint64_t WIDEVALUE;
 typedef WIDEVALUE wideval_t;
 
-#ifdef PACKED_STRUCT_UNALIGNED
+#ifndef HAVE_RB_TIME_TIMESPEC_NEW
+# if defined(PACKED_STRUCT_UNALIGNED) /* 2.2 */
 PACKED_STRUCT_UNALIGNED(struct vtm {
     VALUE year;	/* 2000 for example.  Integer. */
     VALUE subsecx;     /* 0 <= subsecx < TIME_SCALE.  possibly Rational. */
@@ -41,7 +42,7 @@ PACKED_STRUCT_UNALIGNED(struct time_object {
     uint8_t gmt : 3; /* 0:utc 1:localtime 2:fixoff 3:init */
     uint8_t tm_got : 1;
 });
-#else
+# else /* 2.0.0~2.1 */
 struct vtm {
     VALUE year; /* 2000 for example.  Integer. */
     int mon; /* 1..12 */
@@ -62,15 +63,13 @@ struct time_object {
     int gmt; /* 0:utc 1:localtime 2:fixoff */
     int tm_got;
 };
-#endif
+# endif
 
 VALUE
-rb_time_succ(VALUE time);
-VALUE
-rbtime_timespec_new(const struct timespec *ts, int offset)
+rb_time_timespec_new(const struct timespec *ts, int offset)
 {
     VALUE obj = rb_time_nano_new(ts->tv_sec, ts->tv_nsec);
-    if (offset) {
+    if (-86400 < offset && offset <  86400) { /* fixoff */
 	struct time_object *tobj;
 	tobj = DATA_PTR(obj);
 	tobj->tm_got = 0;
@@ -78,12 +77,25 @@ rbtime_timespec_new(const struct timespec *ts, int offset)
 	tobj->vtm.utc_offset = INT2FIX(offset);
 	tobj->vtm.zone = NULL;
     }
+    else if (offset == INT_MAX) { /* localtime */
+    }
+    else if (offset == INT_MAX-1) { /* UTC */
+	struct time_object *tobj;
+	tobj = DATA_PTR(obj);
+	tobj->tm_got = 0;
+	tobj->gmt = 1;
+    }
+    else {
+	rb_raise(rb_eArgError, "utc_offset out of range");
+    }
+
     return obj;
 }
+#endif
 
-/* timespec_now */
+#ifndef RB_TIMESPEC_NOW
 void
-timespec_now(struct timespec *ts)
+rb_timespec_now(struct timespec *ts)
 {
 #ifdef HAVE_CLOCK_GETTIME
     if (clock_gettime(CLOCK_REALTIME, ts) == -1) {
@@ -100,6 +112,7 @@ timespec_now(struct timespec *ts)
     }
 #endif
 }
+#endif
 
 /* localtime_with_gmtoff_zone */
 #ifdef HAVE_GMTIME_R
