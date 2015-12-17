@@ -365,7 +365,7 @@ strptime_exec0(void **pc, const char *fmt, const char *str, size_t slen,
 	const char *p0 = str + si;
 	int r;
 	size_t len;
-	if (*p0 == 'z') {
+	if (*p0 == 'z' || *p0 == 'Z') {
 	    gmtoff = 0;
 	    ADD_PC(1);
 	    END_INSN(z)

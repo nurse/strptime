@@ -169,6 +169,7 @@ describe Strptime do
   it 'parses %z' do
     expect(Strptime.new("%z").exec("+09:00").utc_offset).to eq(32400)
     expect(Strptime.new("%z").exec("+09:30").utc_offset).to eq(34200)
+    expect(Strptime.new("%z").exec("Z").utc_offset).to eq(0)
   end
 
   ## from test/test_time.rb
