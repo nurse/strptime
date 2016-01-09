@@ -35,7 +35,7 @@ VALUE rb_cStrptime;
     {
 
 #define END_INSNS_DISPATCH()                                                   \
-    rb_bug("unknown insn: %p", GET_CURRENT_INSN());                            \
+    rb_bug("strptime: unknown insn: %p", GET_CURRENT_INSN());                  \
     } /* end of while loop */
 
 #define NEXT_INSN() TC_DISPATCH(__NEXT_INSN__)
@@ -506,7 +506,7 @@ strptime_exec0(void **pc, const char *fmt, const char *str, size_t slen,
     END_INSNS_DISPATCH();
 
     /* unreachable */
-    rb_bug("vm_eval: unreachable");
+    rb_bug("strptime_exec0: unreachable");
     UNREACHABLE;
 }
 
