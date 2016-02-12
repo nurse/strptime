@@ -43,6 +43,12 @@ describe Strptime do
     expect(Strptime.new(" %d").exec(" 28").mday).to eq(28)
   end
 
+  it 'parses %A' do
+    pr = Strptime.new("%A")
+    expect{ pr.exec("Sun") }.not_to raise_error(Exception)
+    expect{ pr.exec("Monday") }.not_to raise_error(Exception)
+  end
+
   it 'parses %B' do
     pr = Strptime.new("%B")
     h = pr.exec("May")
@@ -51,14 +57,35 @@ describe Strptime do
     expect(h.mon).to eq(1)
   end
 
+  it 'parses %C' do
+    pr = Strptime.new("%C")
+    expect(pr.exec("19").year).to eq(1900)
+    expect(pr.exec("20").year).to eq(2000)
+    expect(pr.exec("100").year).to eq(1000)
+  end
+
+  it 'parses %E' do
+    expect(Strptime.new("%Ey").exec("99").year).to eq(1999)
+    expect(Strptime.new("%EM").exec("12").min).to eq(12)
+  end
+
+  it 'parses %O' do
+    expect(Strptime.new("%Oy").exec("99").year).to eq(1999)
+    expect(Strptime.new("%OM").exec("12").min).to eq(12)
+  end
+
   it 'parses %H' do
     pr = Strptime.new("%H")
-    h = pr.exec("01")
-    expect(h.hour).to eq(1)
-    h = pr.exec("9")
-    expect(h.hour).to eq(9)
-    h = pr.exec("23")
-    expect(h.hour).to eq(23)
+    expect(pr.exec("01").hour).to eq(1)
+    expect(pr.exec(" 1").hour).to eq(1)
+    expect(pr.exec("9").hour).to eq(9)
+    expect(pr.exec("23").hour).to eq(23)
+    expect{pr.exec("24")}.to raise_error(ArgumentError)
+    pr = Strptime.new("%k")
+    expect(pr.exec("01").hour).to eq(1)
+    expect(pr.exec(" 1").hour).to eq(1)
+    expect(pr.exec("9").hour).to eq(9)
+    expect(pr.exec("23").hour).to eq(23)
     expect{pr.exec("24")}.to raise_error(ArgumentError)
   end
 
@@ -80,6 +107,15 @@ describe Strptime do
     h = pr.exec("60")
     expect(h.sec).to eq(0) # verified
     expect{pr.exec("61")}.to raise_error(ArgumentError)
+  end
+
+  it 'parses %L' do
+    pr = Strptime.new("%L")
+    expect(pr.exec("123").nsec).to eq(123000000)
+    expect(pr.exec("123456").nsec).to eq(123000000)
+    expect(pr.exec("123456").usec).to eq(123000)
+    expect(pr.exec("123456789").nsec).to eq(123000000)
+    expect{pr.exec("a")}.to raise_error(ArgumentError)
   end
 
   it 'parses %N' do
@@ -124,6 +160,18 @@ describe Strptime do
     expect(pr.exec("2015-06-11 10:24:15").utc_offset).to eq(Time.now.utc_offset)
   end
 
+  it 'parses %c' do
+    pr = Strptime.new("%c")
+    expect(pr.exec("Sat Jan  9 07:01:51 2016").year).to eq(2016)
+    expect(pr.exec("Sat Jan  9 07:01:51 2016").month).to eq(1)
+    expect(pr.exec("Sat Jan  9 07:01:51 2016").day).to eq(9)
+    expect(pr.exec("Sat Jan  9 07:01:51 2016").hour).to eq(7)
+    expect(pr.exec("Sat Jan  9 07:01:51 2016").min).to eq(1)
+    expect(pr.exec("Sat Jan  9 07:01:51 2016").sec).to eq(51)
+    expect(pr.exec("Sat Jan  9 07:01:51 2016").nsec).to eq(0)
+    expect(pr.exec("Sat Jan  9 07:01:51 2016").utc_offset).to eq(Time.now.utc_offset)
+  end
+
   it 'parses %d' do
     pr = Strptime.new("%d")
     expect(pr.exec("10").year).to eq(Time.now.year)
@@ -134,6 +182,11 @@ describe Strptime do
     expect(pr.exec("10").sec).to eq(0)
     expect(pr.exec("10").nsec).to eq(0)
     expect(pr.exec("10").utc_offset).to eq(Time.now.utc_offset)
+  end
+
+  it 'parses %s' do
+    pr = Strptime.new("%s")
+    expect(pr.exec("1452334187").to_i).to eq(1452334187)
   end
 
   it 'parses %S%z' do
@@ -172,6 +225,10 @@ describe Strptime do
     expect(Strptime.new("%z").exec("Z").utc_offset).to eq(0)
   end
 
+  it 'parses %%' do
+    expect(Strptime.new("%% %S").exec("% 10").sec).to eq(10)
+  end
+
   ## from test/test_time.rb
   it 'parses empty format' do
     expect{Strptime.new("%y").exec("")}.to raise_error(ArgumentError)
@@ -187,10 +244,6 @@ describe Strptime do
     expect(pr.exec('20010203 -0200').min).to eq(0)
     expect(pr.exec('20010203 -0200').sec).to eq(0)
     expect(pr.exec('20010203 -0200').utc_offset).to eq(-7200)
-  end
-
-  it 'raises when taking %A' do
-    expect{Strptime.new('%A')}.to raise_error(ArgumentError)
   end
 
   it 'parses %Y%d%m %z' do

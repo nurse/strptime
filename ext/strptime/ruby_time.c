@@ -91,9 +91,7 @@ rb_time_timespec_new(const struct timespec *ts, int offset)
 
     return obj;
 }
-#endif
 
-#ifndef RB_TIMESPEC_NOW
 void
 rb_timespec_now(struct timespec *ts)
 {
