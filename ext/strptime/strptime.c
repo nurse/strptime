@@ -91,6 +91,35 @@ valid_range_p(int v, int a, int b)
     return !(v < a || v > b);
 }
 
+static void
+get_tm(struct timespec *tsp, struct tm *tmp, int *gmtoffp)
+{
+    static time_t ct;
+    static struct tm ctm;
+    static long ctmoff;
+    static long localoff;
+    if (ct != tsp->tv_sec) {
+	ct = tsp->tv_sec;
+	localtime_with_gmtoff_zone(&ct, &ctm, &ctmoff, NULL);
+	localoff = ctmoff;
+    }
+    if (gmtoffp) {
+	if (*gmtoffp == INT_MAX) {
+	    *gmtoffp = localoff;
+	}
+	else if (*gmtoffp == INT_MAX-1) {
+	    *gmtoffp = 0;
+	}
+	if (*gmtoffp != ctmoff) {
+	    tm_add_offset(&ctm, *gmtoffp - ctmoff);
+	    ctmoff = *gmtoffp;
+	}
+    }
+    if (tmp) {
+	memcpy(tmp, &ctm, sizeof(struct tm));
+    }
+}
+
 static int
 strptime_exec0(void **pc, const char *fmt, const char *str, size_t slen,
 	       struct timespec *tsp, int *gmtoffp)
@@ -421,31 +450,7 @@ strptime_exec0(void **pc, const char *fmt, const char *str, size_t slen,
 	struct tm tm;
 	time_t t;
 	int gmt = gmtoff >= INT_MAX-1 ? INT_MAX-gmtoff : 2;
-
-	/* get current time with timezone */
-	rb_timespec_now(&ts);
-	{
-	    static time_t ct;
-	    static struct tm ctm;
-	    static long ctmoff;
-	    static long localoff;
-	    if (ct != ts.tv_sec) {
-		ct = ts.tv_sec;
-		localtime_with_gmtoff_zone(&ct, &ctm, &ctmoff, NULL);
-		localoff = ctmoff;
-	    }
-	    if (gmtoff == INT_MAX) {
-		gmtoff = localoff;
-	    }
-	    else if (gmtoff == INT_MAX-1) {
-		gmtoff = 0;
-	    }
-	    if (gmtoff != ctmoff) {
-		tm_add_offset(&ctm, gmtoff - ctmoff);
-		ctmoff = gmtoff;
-	    }
-	    memcpy(&tm, &ctm, sizeof(struct tm));
-	}
+	const char *r;
 
 	/* overwrite time */
 	if (year != INT_MAX) {
@@ -466,6 +471,17 @@ strptime_exec0(void **pc, const char *fmt, const char *str, size_t slen,
 	    tm.tm_sec = sec;
 	}
 	else {
+	    rb_timespec_now(&ts);
+	    if (gmt) {
+		t = ts.tv_sec;
+		if (gmt == 2) t += gmtoff;
+		gmtime_r(&t, &tm);
+	    }
+	    else {
+		long off;
+		localtime_with_gmtoff_zone(&ts.tv_sec, &tm, &off, NULL);
+		gmtoff = (int)off;
+	    }
 	    if (mon != -1) goto setmonth;
 	    if (mday != -1) goto setmday;
 	    if (hour != -1) goto sethour;
@@ -473,8 +489,14 @@ strptime_exec0(void **pc, const char *fmt, const char *str, size_t slen,
 	    if (sec != -1) tm.tm_sec = sec;
 	}
 
-	t = timegm_noleapsecond(&tm);
-	if (gmt != 1) t -= gmtoff;
+	if (gmt) {
+	    t = timegm_noleapsecond(&tm);
+	    if (gmt == 2) t -= gmtoff;
+	}
+	else {
+	    r = find_time_t(&tm, gmt, &t);
+	    if (r) fail();
+	}
 	tsp->tv_sec = t;
 	tsp->tv_nsec = nsec;
 	*gmtoffp = gmtoff;

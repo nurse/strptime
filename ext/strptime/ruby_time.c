@@ -60,7 +60,7 @@ struct vtm {
 struct time_object {
     wideval_t timew; /* time_t value * TIME_SCALE.  possibly Rational. */
     struct vtm vtm;
-    int gmt; /* 0:utc 1:localtime 2:fixoff */
+    int gmt; /* 0:localtime 1:utc 2:fixoff */
     int tm_got;
 };
 # endif
@@ -114,7 +114,6 @@ rb_timespec_now(struct timespec *ts)
 }
 #endif
 
-/* localtime_with_gmtoff_zone */
 #ifdef HAVE_GMTIME_R
 #define rb_gmtime_r(t, tm) gmtime_r((t), (tm))
 #define rb_localtime_r(t, tm) localtime_r((t), (tm))
@@ -177,7 +176,6 @@ rb_gmtime_r2(const time_t *t, struct tm *result)
 #endif
     return result;
 }
-#define GMTIME(tm, result) rb_gmtime_r2((tm), &(result))
 #endif
 
 struct tm *
@@ -217,7 +215,9 @@ localtime_with_gmtoff_zone(const time_t *t, struct tm *result, long *gmtoff,
 }
 
 #define NDIV(x,y) (-(-((x)+1)/(y))-1)
+#define NMOD(x,y) ((y)-(-((x)+1)%(y))-1)
 #define DIV(n,d) ((n)<0 ? NDIV((n),(d)) : (n)/(d))
+#define MOD(n,d) ((n)<0 ? NMOD((n),(d)) : (n)%(d))
 
 static int
 leap_year_p(int y)
@@ -263,6 +263,20 @@ static const int leap_year_days_in_month[] = {
     31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
 };
 
+static int
+calc_tm_yday(long tm_year, int tm_mon, int tm_mday)
+{
+    int tm_year_mod400 = (int)MOD(tm_year, 400);
+    int tm_yday = tm_mday;
+
+    if (leap_year_p(tm_year_mod400 + 1900))
+        tm_yday += leap_year_yday_offset[tm_mon];
+    else
+        tm_yday += common_year_yday_offset[tm_mon];
+
+    return tm_yday;
+}
+
 time_t
 timegm_noleapsecond(struct tm *tm)
 {
@@ -285,6 +299,306 @@ timegm_noleapsecond(struct tm *tm)
 		    DIV(tm_year-69,4) -
 		    DIV(tm_year-1,100) +
 		    DIV(tm_year+299,400))*86400;
+}
+
+/* assume time_t is signed */
+#define SIGNED_INTEGER_MAX(sint_type) \
+  (sint_type) \
+  ((((sint_type)1) << (sizeof(sint_type) * CHAR_BIT - 2)) | \
+  ((((sint_type)1) << (sizeof(sint_type) * CHAR_BIT - 2)) - 1))
+#define SIGNED_INTEGER_MIN(sint_type) (-SIGNED_INTEGER_MAX(sint_type)-1)
+# define TIMET_MAX SIGNED_INTEGER_MAX(time_t)
+# define TIMET_MIN SIGNED_INTEGER_MIN(time_t)
+# define DEBUG_FIND_TIME_NUMGUESS_INC
+# define DEBUG_REPORT_GUESSRANGE
+
+static int
+tmcmp(struct tm *a, struct tm *b)
+{
+    if (a->tm_year != b->tm_year)
+        return a->tm_year < b->tm_year ? -1 : 1;
+    else if (a->tm_mon != b->tm_mon)
+        return a->tm_mon < b->tm_mon ? -1 : 1;
+    else if (a->tm_mday != b->tm_mday)
+        return a->tm_mday < b->tm_mday ? -1 : 1;
+    else if (a->tm_hour != b->tm_hour)
+        return a->tm_hour < b->tm_hour ? -1 : 1;
+    else if (a->tm_min != b->tm_min)
+        return a->tm_min < b->tm_min ? -1 : 1;
+    else if (a->tm_sec != b->tm_sec)
+        return a->tm_sec < b->tm_sec ? -1 : 1;
+    else
+        return 0;
+}
+
+const char *
+find_time_t(struct tm *tptr, int utc_p, time_t *tp)
+{
+    time_t guess, guess0, guess_lo, guess_hi;
+    struct tm *tm, tm0, tm_lo, tm_hi;
+    int d;
+    int find_dst;
+    struct tm result;
+    int status;
+    int tptr_tm_yday;
+
+#define GUESS(p) (DEBUG_FIND_TIME_NUMGUESS_INC (utc_p ? rb_gmtime_r((p), &result) : LOCALTIME((p), result)))
+
+    guess_lo = TIMET_MIN;
+    guess_hi = TIMET_MAX;
+
+    find_dst = 0 < tptr->tm_isdst;
+
+#if defined(HAVE_MKTIME)
+    tm0 = *tptr;
+    if (!utc_p && (guess = mktime(&tm0)) != -1) {
+        tm = GUESS(&guess);
+        if (tm && tmcmp(tptr, tm) == 0) {
+            goto found;
+        }
+    }
+#endif
+
+    tm0 = *tptr;
+    if (tm0.tm_mon < 0) {
+	tm0.tm_mon = 0;
+	tm0.tm_mday = 1;
+	tm0.tm_hour = 0;
+	tm0.tm_min = 0;
+	tm0.tm_sec = 0;
+    }
+    else if (11 < tm0.tm_mon) {
+	tm0.tm_mon = 11;
+	tm0.tm_mday = 31;
+	tm0.tm_hour = 23;
+	tm0.tm_min = 59;
+	tm0.tm_sec = 60;
+    }
+    else if (tm0.tm_mday < 1) {
+	tm0.tm_mday = 1;
+	tm0.tm_hour = 0;
+	tm0.tm_min = 0;
+	tm0.tm_sec = 0;
+    }
+    else if ((d = (leap_year_p(1900 + tm0.tm_year) ?
+                   leap_year_days_in_month :
+		   common_year_days_in_month)[tm0.tm_mon]) < tm0.tm_mday) {
+	tm0.tm_mday = d;
+	tm0.tm_hour = 23;
+	tm0.tm_min = 59;
+	tm0.tm_sec = 60;
+    }
+    else if (tm0.tm_hour < 0) {
+	tm0.tm_hour = 0;
+	tm0.tm_min = 0;
+	tm0.tm_sec = 0;
+    }
+    else if (23 < tm0.tm_hour) {
+	tm0.tm_hour = 23;
+	tm0.tm_min = 59;
+	tm0.tm_sec = 60;
+    }
+    else if (tm0.tm_min < 0) {
+	tm0.tm_min = 0;
+	tm0.tm_sec = 0;
+    }
+    else if (59 < tm0.tm_min) {
+	tm0.tm_min = 59;
+	tm0.tm_sec = 60;
+    }
+    else if (tm0.tm_sec < 0) {
+	tm0.tm_sec = 0;
+    }
+    else if (60 < tm0.tm_sec) {
+	tm0.tm_sec = 60;
+    }
+
+    DEBUG_REPORT_GUESSRANGE;
+    guess0 = guess = timegm_noleapsecond(&tm0);
+    tm = GUESS(&guess);
+    if (tm) {
+	d = tmcmp(tptr, tm);
+	if (d == 0) { goto found; }
+	if (d < 0) {
+	    guess_hi = guess;
+	    guess -= 24 * 60 * 60;
+	}
+	else {
+	    guess_lo = guess;
+	    guess += 24 * 60 * 60;
+	}
+        DEBUG_REPORT_GUESSRANGE;
+	if (guess_lo < guess && guess < guess_hi && (tm = GUESS(&guess)) != NULL) {
+	    d = tmcmp(tptr, tm);
+	    if (d == 0) { goto found; }
+	    if (d < 0)
+		guess_hi = guess;
+	    else
+		guess_lo = guess;
+            DEBUG_REPORT_GUESSRANGE;
+	}
+    }
+
+    tm = GUESS(&guess_lo);
+    if (!tm) goto error;
+    d = tmcmp(tptr, tm);
+    if (d < 0) goto out_of_range;
+    if (d == 0) { guess = guess_lo; goto found; }
+    tm_lo = *tm;
+
+    tm = GUESS(&guess_hi);
+    if (!tm) goto error;
+    d = tmcmp(tptr, tm);
+    if (d > 0) goto out_of_range;
+    if (d == 0) { guess = guess_hi; goto found; }
+    tm_hi = *tm;
+
+    DEBUG_REPORT_GUESSRANGE;
+
+    status = 1;
+
+    while (guess_lo + 1 < guess_hi) {
+        if (status == 0) {
+          binsearch:
+            guess = guess_lo / 2 + guess_hi / 2;
+            if (guess <= guess_lo)
+                guess = guess_lo + 1;
+            else if (guess >= guess_hi)
+                guess = guess_hi - 1;
+            status = 1;
+        }
+        else {
+            if (status == 1) {
+                time_t guess0_hi = timegm_noleapsecond(&tm_hi);
+                guess = guess_hi - (guess0_hi - guess0);
+                if (guess == guess_hi) /* hh:mm:60 tends to cause this condition. */
+                    guess--;
+                status = 2;
+            }
+            else if (status == 2) {
+                time_t guess0_lo = timegm_noleapsecond(&tm_lo);
+                guess = guess_lo + (guess0 - guess0_lo);
+                if (guess == guess_lo)
+                    guess++;
+                status = 0;
+            }
+            if (guess <= guess_lo || guess_hi <= guess) {
+                /* Precious guess is invalid. try binary search. */
+#ifdef DEBUG_GUESSRANGE
+                if (guess <= guess_lo) fprintf(stderr, "too small guess: %ld <= %ld\n", guess, guess_lo);
+                if (guess_hi <= guess) fprintf(stderr, "too big guess: %ld <= %ld\n", guess_hi, guess);
+#endif
+                goto binsearch;
+            }
+        }
+
+	tm = GUESS(&guess);
+	if (!tm) goto error;
+
+	d = tmcmp(tptr, tm);
+
+        if (d < 0) {
+            guess_hi = guess;
+            tm_hi = *tm;
+            DEBUG_REPORT_GUESSRANGE;
+        }
+        else if (d > 0) {
+            guess_lo = guess;
+            tm_lo = *tm;
+            DEBUG_REPORT_GUESSRANGE;
+        }
+        else {
+          found:
+	    if (!utc_p) {
+		/* If localtime is nonmonotonic, another result may exist. */
+		time_t guess2;
+		if (find_dst) {
+		    guess2 = guess - 2 * 60 * 60;
+		    tm = LOCALTIME(&guess2, result);
+		    if (tm) {
+			if (tptr->tm_hour != (tm->tm_hour + 2) % 24 ||
+			    tptr->tm_min != tm->tm_min ||
+			    tptr->tm_sec != tm->tm_sec) {
+			    guess2 -= (tm->tm_hour - tptr->tm_hour) * 60 * 60 +
+				      (tm->tm_min - tptr->tm_min) * 60 +
+				      (tm->tm_sec - tptr->tm_sec);
+			    if (tptr->tm_mday != tm->tm_mday)
+				guess2 += 24 * 60 * 60;
+			    if (guess != guess2) {
+				tm = LOCALTIME(&guess2, result);
+				if (tm && tmcmp(tptr, tm) == 0) {
+				    if (guess < guess2)
+					*tp = guess;
+				    else
+					*tp = guess2;
+                                    return NULL;
+				}
+			    }
+			}
+		    }
+		}
+		else {
+		    guess2 = guess + 2 * 60 * 60;
+		    tm = LOCALTIME(&guess2, result);
+		    if (tm) {
+			if ((tptr->tm_hour + 2) % 24 != tm->tm_hour ||
+			    tptr->tm_min != tm->tm_min ||
+			    tptr->tm_sec != tm->tm_sec) {
+			    guess2 -= (tm->tm_hour - tptr->tm_hour) * 60 * 60 +
+				      (tm->tm_min - tptr->tm_min) * 60 +
+				      (tm->tm_sec - tptr->tm_sec);
+			    if (tptr->tm_mday != tm->tm_mday)
+				guess2 -= 24 * 60 * 60;
+			    if (guess != guess2) {
+				tm = LOCALTIME(&guess2, result);
+				if (tm && tmcmp(tptr, tm) == 0) {
+				    if (guess < guess2)
+					*tp = guess2;
+				    else
+					*tp = guess;
+                                    return NULL;
+				}
+			    }
+			}
+		    }
+		}
+	    }
+            *tp = guess;
+            return NULL;
+	}
+    }
+
+    /* Given argument has no corresponding time_t. Let's extrapolate. */
+    /*
+     *  `Seconds Since the Epoch' in SUSv3:
+     *  tm_sec + tm_min*60 + tm_hour*3600 + tm_yday*86400 +
+     *  (tm_year-70)*31536000 + ((tm_year-69)/4)*86400 -
+     *  ((tm_year-1)/100)*86400 + ((tm_year+299)/400)*86400
+     */
+
+    tptr_tm_yday = calc_tm_yday(tptr->tm_year, tptr->tm_mon, tptr->tm_mday);
+
+    *tp = guess_lo +
+          ((tptr->tm_year - tm_lo.tm_year) * 365 +
+           ((tptr->tm_year-69)/4) -
+           ((tptr->tm_year-1)/100) +
+           ((tptr->tm_year+299)/400) -
+           ((tm_lo.tm_year-69)/4) +
+           ((tm_lo.tm_year-1)/100) -
+           ((tm_lo.tm_year+299)/400) +
+           tptr_tm_yday -
+           tm_lo.tm_yday) * 86400 +
+          (tptr->tm_hour - tm_lo.tm_hour) * 3600 +
+          (tptr->tm_min - tm_lo.tm_min) * 60 +
+          (tptr->tm_sec - (tm_lo.tm_sec == 60 ? 59 : tm_lo.tm_sec));
+
+    return NULL;
+
+  out_of_range:
+    return "time out of range";
+
+  error:
+    return "gmtime/localtime error";
 }
 
 void

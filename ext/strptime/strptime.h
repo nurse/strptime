@@ -10,6 +10,7 @@ struct tm * localtime_with_gmtoff_zone(const time_t *t, struct tm *result, long 
 void rb_timespec_now(struct timespec *ts);
 # endif
 time_t timegm_noleapsecond(struct tm *tm);
+const char *find_time_t(struct tm *tptr, int utc_p, time_t *tp);
 void tm_add_offset(struct tm *tm, long diff);
 
 #endif /* STRPTIME_H */
