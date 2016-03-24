@@ -5,9 +5,10 @@ install:
   - ruby --version
   - gem --version
   - bundle install
-build: off
+build_script:
+  - bundle exec rake -rdevkit build
 test_script:
-  - bundle exec rake -rdevkit
+  - bundle exec rake -rdevkit spec
 environment:
   matrix:
     - ruby_version: "200"
