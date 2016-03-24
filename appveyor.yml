@@ -1,10 +1,12 @@
 ---
+shallow_clone: true
 install:
   - SET PATH=C:\Ruby%ruby_version%\bin;%PATH%
   - ruby --version
   - gem --version
   - bundle install
-build_script:
+build: off
+test_script:
   - bundle exec rake -rdevkit
 environment:
   matrix:
