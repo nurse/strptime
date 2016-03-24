@@ -1,5 +1,4 @@
 ---
-shallow_clone: true
 install:
   - SET PATH=C:\Ruby%ruby_version%\bin;%PATH%
   - ruby --version
