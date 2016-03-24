@@ -28,7 +28,7 @@ describe Strptime do
     expect(pr.exec("25").year).to eq(2025)
     expect(pr.exec("70").year).to eq(1970)
     pending "Windows doen't support negative time_t" if Gem.win_platform?
-    expect{pr.exec("68").year}.to raise_error(ArgumentError)
+    expect(pr.exec("68").year).to eq(2068)
     expect(pr.exec("69").year).to eq(1969)
   end
 
@@ -138,7 +138,6 @@ describe Strptime do
 
   it 'parses %S%z' do
     pr = Strptime.new("%S%z")
-    p pr.exec("12-03:00")
     expect(pr.exec("12-03:00").year).to eq(Time.now.localtime("-03:00").year)
     expect(pr.exec("12-03:00").month).to eq(Time.now.localtime("-03:00").month)
     expect(pr.exec("12-03:00").day).to eq(Time.now.localtime("-03:00").day)
