@@ -91,35 +91,6 @@ valid_range_p(int v, int a, int b)
     return !(v < a || v > b);
 }
 
-static void
-get_tm(struct timespec *tsp, struct tm *tmp, int *gmtoffp)
-{
-    static time_t ct;
-    static struct tm ctm;
-    static long ctmoff;
-    static long localoff;
-    if (ct != tsp->tv_sec) {
-	ct = tsp->tv_sec;
-	localtime_with_gmtoff_zone(&ct, &ctm, &ctmoff, NULL);
-	localoff = ctmoff;
-    }
-    if (gmtoffp) {
-	if (*gmtoffp == INT_MAX) {
-	    *gmtoffp = localoff;
-	}
-	else if (*gmtoffp == INT_MAX-1) {
-	    *gmtoffp = 0;
-	}
-	if (*gmtoffp != ctmoff) {
-	    tm_add_offset(&ctm, *gmtoffp - ctmoff);
-	    ctmoff = *gmtoffp;
-	}
-    }
-    if (tmp) {
-	memcpy(tmp, &ctm, sizeof(struct tm));
-    }
-}
-
 static int
 strptime_exec0(void **pc, const char *fmt, const char *str, size_t slen,
 	       struct timespec *tsp, int *gmtoffp)
