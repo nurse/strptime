@@ -28,6 +28,7 @@ describe Strptime do
     expect(pr.exec("25").year).to eq(2025)
     expect(pr.exec("70").year).to eq(1970)
     pending "Windows doen't support negative time_t" if Gem.win_platform?
+    pending "Darwin's localtime doen't support year 2038" if /darwin/ =~ RUBY_PLATFORM
     expect(pr.exec("68").year).to eq(2068)
     expect(pr.exec("69").year).to eq(1969)
   end
