@@ -12,5 +12,6 @@ void rb_timespec_now(struct timespec *ts);
 time_t timegm_noleapsecond(struct tm *tm);
 const char *find_time_t(struct tm *tptr, int utc_p, time_t *tp);
 void tm_add_offset(struct tm *tm, long diff);
+void _Init_strftime(void);
 
 #endif /* STRPTIME_H */

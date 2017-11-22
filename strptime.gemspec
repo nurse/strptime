@@ -9,8 +9,8 @@ Gem::Specification.new do |spec|
   spec.authors       = ["NARUSE, Yui"]
   spec.email         = ["naruse@airemix.jp"]
 
-  spec.summary       = %q{a fast strptime engine.}
-  spec.description   = %q{a fast strptime engine which uses VM.}
+  spec.summary       = %q{a fast strptime/strftime engine.}
+  spec.description   = %q{a fast strptime/strftime engine which uses VM.}
   spec.homepage      = "https://github.com/nurse/strptime"
   spec.license       = "BSD-2-Clause"
 

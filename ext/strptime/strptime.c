@@ -481,7 +481,7 @@ strptime_exec0(void **pc, const char *fmt, const char *str, size_t slen,
     UNREACHABLE;
 }
 
-void **
+static void **
 strptime_compile(const char *fmt, size_t flen)
 {
     size_t fi = 0;
@@ -518,7 +518,10 @@ strptime_compile(const char *fmt, size_t flen)
 		    fi++;
 		    continue;
 		}
-	    default: rb_raise(rb_eArgError, "invalid format"); break;
+	    default:
+		xfree(isns0);
+		rb_raise(rb_eArgError, "invalid format");
+		break;
 	    }
 	case ' ':
 	case '\t':
@@ -562,7 +565,7 @@ static void
 strptime_free(void *ptr)
 {
     struct strptime_object *tobj = ptr;
-    ruby_xfree(tobj->isns);
+    if (tobj->isns) ruby_xfree(tobj->isns);
 }
 
 static size_t
@@ -714,6 +717,7 @@ strptime_source(VALUE self)
     return tobj->fmt;
 }
 
+void Init_strftime(void);
 /*
  * Document-class: Strptime
  *
@@ -735,4 +739,5 @@ Init_strptime(void)
     rb_define_method(rb_cStrptime, "exec", strptime_exec, 1);
     rb_define_method(rb_cStrptime, "execi", strptime_execi, 1);
     rb_define_method(rb_cStrptime, "source", strptime_source, 0);
+    Init_strftime();
 }
