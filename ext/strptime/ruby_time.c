@@ -147,7 +147,7 @@ rb_localtime_r(const time_t *t, struct tm *result)
 }
 #define LOCALTIME(tm, result) (tzset(),rb_localtime_r((tm), &(result)))
 
-static struct tm *
+struct tm *
 rb_gmtime_r(const time_t *t, struct tm *result)
 {
 #ifdef HAVE_GMTIME_R

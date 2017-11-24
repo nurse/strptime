@@ -76,8 +76,8 @@ describe Strftime do
     expect{Strftime.new('%Z')}.to raise_error(ArgumentError)
   end
 
-  it 'parses %z' do
-    expect(Strftime.new("%z").exec(Time.now)).to eq("Z")
+  it 'raises %z' do
+    expect{Strftime.new('%z')}.to raise_error(ArgumentError)
   end
 
   it 'parses empty format' do
@@ -92,5 +92,12 @@ describe Strftime do
     gr = Strftime.new("%Y-%m-%dT%H:%M:%S.%LZ")
     t = Time.now.utc
     expect(gr.exec(t)).to eq(t.strftime("%Y-%m-%dT%H:%M:%S.%LZ"))
+  end
+
+  it 'execi "%Y-%m-%dT%H:%M:%S.%LZ"' do
+    gr = Strftime.new("%Y-%m-%dT%H:%M:%S.%LZ")
+    t = Time.now.utc
+    expect(gr.execi(t.to_f)).to eq(t.strftime("%Y-%m-%dT%H:%M:%S.%LZ"))
+    expect(gr.execi(t.to_r)).to eq(t.strftime("%Y-%m-%dT%H:%M:%S.%LZ"))
   end
 end

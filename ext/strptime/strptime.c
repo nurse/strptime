@@ -717,7 +717,6 @@ strptime_source(VALUE self)
     return tobj->fmt;
 }
 
-void Init_strftime(void);
 /*
  * Document-class: Strptime
  *
