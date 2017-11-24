@@ -64,12 +64,12 @@ describe Strftime do
 
   it 'parses %N' do
     gr = Strftime.new("%L")
-    expect(gr.exec(Time.at(0.123r))).to eq("123")
+    expect(gr.exec(Time.at(Rational("0.123")))).to eq("123")
   end
 
   it 'parses %N' do
     gr = Strftime.new("%N")
-    expect(gr.exec(Time.at(0.123456789r))).to eq("123456789")
+    expect(gr.exec(Time.at(Rational("0.123456789")))).to eq("123456789")
   end
 
   it 'raises %Z' do
