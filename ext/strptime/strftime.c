@@ -3,6 +3,9 @@
 #include <time.h>
 
 VALUE rb_cStrftime;
+#ifndef HAVE_RB_TIME_UTC_OFFSET
+static ID id_gmtoff;
+#endif
 
 #define GetStrftimeval(obj, tobj) ((tobj) = get_strftimeval(obj))
 #define GetNewStrftimeval(obj, tobj) ((tobj) = get_new_strftimeval(obj))
@@ -65,7 +68,7 @@ strftime_exec0(void **pc, VALUE fmt, struct timespec *tsp, int gmtoff, size_t re
 	    LABEL_PTR(m), NULL, NULL, NULL,
 	    NULL, NULL, NULL, NULL,
 	    NULL, NULL, NULL, NULL,
-	    LABEL_PTR(y), NULL,
+	    LABEL_PTR(y), LABEL_PTR(z),
 	};
 	*pc = (void *)insns_address_table;
 	return Qnil;
@@ -163,6 +166,26 @@ strftime_exec0(void **pc, VALUE fmt, struct timespec *tsp, int gmtoff, size_t re
 	ADD_PC(1);
 	END_INSN(y)
     }
+    INSN_ENTRY(z)
+    {
+	int h, m, tmp=gmtoff;
+	if (gmtoff >= 0) {
+	    *p++ = '+';
+	} else {
+	    *p++ = '-';
+	    tmp = -tmp;
+	}
+	tmp /= 60;
+	h = (tmp / 60)&15; /* ignore too large offset */
+	m = tmp % 60;
+	*p++ = '0' + (h / 10);
+	*p++ = '0' + (h % 10);
+	*p++ = ':';
+	*p++ = '0' + (m / 10);
+	*p++ = '0' + (m % 10);
+	ADD_PC(1);
+	END_INSN(y)
+    }
     INSN_ENTRY(_60)
     {
 	size_t v = (size_t)GET_OPERAND(1);
@@ -233,6 +256,10 @@ strftime_compile(const char *fmt, size_t flen, size_t *rlenp)
 	      goto accept_format;
 	    case 'y':
 	      rlen += 2;
+	      goto accept_format;
+	    case 'z':
+	      rlen += 6;
+	      goto accept_format;
 accept_format:
 		tmp = insns_address_table[c - 'A'];
 		if (tmp) {
@@ -388,11 +415,16 @@ strftime_init_copy(VALUE copy, VALUE self)
 static VALUE
 strftime_exec(VALUE self, VALUE time)
 {
-    struct strftime_object *tobj;
+    struct strftime_object *sobj;
     struct timespec ts = rb_time_timespec(time);
-    GetStrftimeval(self, tobj);
+#ifdef HAVE_RB_TIME_UTC_OFFSET
+    int gmtoff = FIX2INT(rb_time_utc_offset(time));
+#else
+    int gmtoff = NUM2INT(rb_funcall(time, id_gmtoff, 0));
+#endif
+    GetStrftimeval(self, sobj);
 
-    return strftime_exec0(tobj->isns, tobj->fmt, &ts, 0, tobj->result_length);
+    return strftime_exec0(sobj->isns, sobj->fmt, &ts, gmtoff, sobj->result_length);
 }
 
 /*
@@ -459,4 +491,5 @@ Init_strftime(void)
     rb_define_method(rb_cStrftime, "exec", strftime_exec, 1);
     rb_define_method(rb_cStrftime, "execi", strftime_execi, 1);
     rb_define_method(rb_cStrftime, "source", strftime_source, 0);
+    id_gmtoff = rb_intern("gmtoff");
 }
