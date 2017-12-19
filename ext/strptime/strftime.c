@@ -180,7 +180,6 @@ strftime_exec0(void **pc, VALUE fmt, struct timespec *tsp, int gmtoff, size_t re
 	m = tmp % 60;
 	*p++ = '0' + (h / 10);
 	*p++ = '0' + (h % 10);
-	*p++ = ':';
 	*p++ = '0' + (m / 10);
 	*p++ = '0' + (m % 10);
 	ADD_PC(1);
@@ -258,7 +257,7 @@ strftime_compile(const char *fmt, size_t flen, size_t *rlenp)
 	      rlen += 2;
 	      goto accept_format;
 	    case 'z':
-	      rlen += 6;
+	      rlen += 5;
 	      goto accept_format;
 accept_format:
 		tmp = insns_address_table[c - 'A'];

@@ -78,9 +78,9 @@ describe Strftime do
 
   it 'raises %z' do
     gr = Strftime.new('%z')
-    expect(gr.exec(Time.now.utc)).to eq '+00:00'
-    expect(gr.exec(Time.now.localtime(32400))).to eq '+09:00'
-    expect(gr.exec(Time.now.localtime(-28800))).to eq '-08:00'
+    expect(gr.exec(Time.now.utc)).to eq '+0000'
+    expect(gr.exec(Time.now.localtime(32400))).to eq '+0900'
+    expect(gr.exec(Time.now.localtime(-28800))).to eq '-0800'
   end
 
   it 'parses empty format' do
