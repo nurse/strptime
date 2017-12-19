@@ -77,6 +77,7 @@ strftime_exec0(void **pc, VALUE fmt, struct timespec *tsp, int gmtoff, size_t re
     result = rb_str_new(NULL, result_length);
     p = RSTRING_PTR(result);
 
+    tsp->tv_sec += gmtoff;
     rb_gmtime_r(&tsp->tv_sec, &tm);
 
     INSN_DISPATCH();

@@ -79,6 +79,8 @@ describe Strftime do
   it 'raises %z' do
     gr = Strftime.new('%z')
     expect(gr.exec(Time.now.utc)).to eq '+0000'
+    expect(gr.exec(Time.now.utc)).to eq Time.now.utc.strftime('%z')
+    expect(gr.exec(Time.now)).to eq Time.now.strftime('%z')
     expect(gr.exec(Time.now.localtime(32400))).to eq '+0900'
     expect(gr.exec(Time.now.localtime(-28800))).to eq '-0800'
   end
@@ -95,12 +97,15 @@ describe Strftime do
     gr = Strftime.new("%Y-%m-%dT%H:%M:%S.%LZ")
     t = Time.now.utc
     expect(gr.exec(t)).to eq(t.strftime("%Y-%m-%dT%H:%M:%S.%LZ"))
+    t = Time.now.localtime(32400)
+    expect(gr.exec(t)).to eq(t.strftime("%Y-%m-%dT%H:%M:%S.%LZ"))
+    t = Time.now.localtime(-28800)
+    expect(gr.exec(t)).to eq(t.strftime("%Y-%m-%dT%H:%M:%S.%LZ"))
   end
 
   it 'execi "%Y-%m-%dT%H:%M:%S.%LZ"' do
     gr = Strftime.new("%Y-%m-%dT%H:%M:%S.%LZ")
     t = Time.now.utc
     expect(gr.execi(t.to_f)).to eq(t.strftime("%Y-%m-%dT%H:%M:%S.%LZ"))
-    expect(gr.execi(t.to_r)).to eq(t.strftime("%Y-%m-%dT%H:%M:%S.%LZ"))
   end
 end
