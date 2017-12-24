@@ -108,4 +108,12 @@ describe Strftime do
     t = Time.now.utc
     expect(gr.execi(t.to_f)).to eq(t.strftime("%Y-%m-%dT%H:%M:%S.%LZ"))
   end
+
+  describe 'result encoding' do
+    it 'is same with given format encoding' do
+      format = "%Y".force_encoding(Encoding::UTF_8)
+      gr = Strftime.new(format)
+      expect(gr.exec(Time.utc(2015)).encoding).to eq(format.encoding)
+    end
+  end
 end
