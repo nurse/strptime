@@ -74,7 +74,7 @@ strftime_exec0(void **pc, VALUE fmt, struct timespec *tsp, int gmtoff, size_t re
 	return Qnil;
     }
 
-    result = rb_str_new(NULL, result_length);
+    result = rb_enc_str_new(NULL, result_length, rb_enc_get(fmt));
     p = RSTRING_PTR(result);
 
     tsp->tv_sec += gmtoff;
@@ -491,5 +491,7 @@ Init_strftime(void)
     rb_define_method(rb_cStrftime, "exec", strftime_exec, 1);
     rb_define_method(rb_cStrftime, "execi", strftime_execi, 1);
     rb_define_method(rb_cStrftime, "source", strftime_source, 0);
+#ifndef HAVE_RB_TIME_UTC_OFFSET
     id_gmtoff = rb_intern("gmtoff");
+#endif
 }
