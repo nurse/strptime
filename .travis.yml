@@ -11,6 +11,7 @@ rvm:
   - 2.3.0-clang
   - 2.4.2
   - 2.4.2-clang
+  - 2.5.0
   - ruby-head
 matrix:
   allow_failures:
