@@ -491,5 +491,7 @@ Init_strftime(void)
     rb_define_method(rb_cStrftime, "exec", strftime_exec, 1);
     rb_define_method(rb_cStrftime, "execi", strftime_execi, 1);
     rb_define_method(rb_cStrftime, "source", strftime_source, 0);
+#ifndef HAVE_RB_TIME_UTC_OFFSET
     id_gmtoff = rb_intern("gmtoff");
+#endif
 }
