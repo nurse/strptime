@@ -24,6 +24,12 @@ describe Strftime do
     expect(gr.exec(Time.utc(2025))).to eq("25")
   end
 
+  it 'parses %b' do
+    gr = Strftime.new("%b")
+    expect(gr.exec(Time.utc(2015,12))).to eq("Dec")
+    expect(gr.exec(Time.utc(2025,3))).to eq("Mar")
+  end
+
   it 'parses %m' do
     gr = Strftime.new("%m")
     expect(gr.exec(Time.utc(2017,12))).to eq("12")
