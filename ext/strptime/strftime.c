@@ -44,7 +44,9 @@ static ID id_gmtoff;
 
 #define NEXT_INSN() TC_DISPATCH(__NEXT_INSN__)
 
-
+static const char *month_names[] = {
+    "January", "February", "March",     "April",   "May",      "June",
+    "July",    "August",   "September", "October", "November", "December"};
 
 static VALUE
 strftime_exec0(void **pc, VALUE fmt, struct timespec *tsp, int gmtoff, size_t result_length)
@@ -62,7 +64,7 @@ strftime_exec0(void **pc, VALUE fmt, struct timespec *tsp, int gmtoff, size_t re
 	    NULL, NULL, NULL, NULL,
 	    LABEL_PTR(Y), NULL, NULL, NULL,
 	    NULL, NULL, LABEL_PTR(_5f), LABEL_PTR(_60),
-	    NULL, NULL, NULL, LABEL_PTR(d),
+	    NULL, LABEL_PTR(b), NULL, LABEL_PTR(d),
 	    LABEL_PTR(d), NULL, NULL, NULL,
 	    NULL, NULL, NULL, NULL,
 	    LABEL_PTR(m), NULL, NULL, NULL,
@@ -150,6 +152,14 @@ strftime_exec0(void **pc, VALUE fmt, struct timespec *tsp, int gmtoff, size_t re
 	*p++ = '0' + (tm.tm_mday % 10);
 	ADD_PC(1);
 	END_INSN(d)
+    }
+    INSN_ENTRY(b)
+    {
+	const char *mon = month_names[tm.tm_mon];
+	memcpy(p, mon, 3);
+	p += 3;
+	ADD_PC(1);
+	END_INSN(b)
     }
     INSN_ENTRY(m)
     {
@@ -251,6 +261,9 @@ strftime_compile(const char *fmt, size_t flen, size_t *rlenp)
 	    case 'd':
 	      rlen += 2;
 	      goto accept_format;
+            case 'b':
+              rlen += 3;
+              goto accept_format;
 	    case 'm':
 	      rlen += 2;
 	      goto accept_format;
