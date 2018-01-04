@@ -26,11 +26,23 @@ Or install it yourself as:
 
 ## Usage
 
+### Strptime for time parsing
+
 ```ruby
 require 'strptime'
 parser = Strptime.new('%Y-%m-%dT%H:%M:%S%z')
 parser.exec('2015-12-25T12:34:56+09') #=> 2015-12-25 12:34:56 +09:00
 parser.execi('2015-12-25T12:34:56+09') #=> 1451014496
+```
+
+### Strftime for time formatting
+
+```ruby
+require 'strptime'
+now = Time.now
+formatter = Strftime.new('%Y-%m-%dT%H:%M:%S.%L %z')
+formatter.exec(now)        # 2017-12-29T07:24:31.505 +0900
+formatter.execi(now.to_i)  # 2017-12-28T22:24:31.000 +0000
 ```
 
 ## Contributing
