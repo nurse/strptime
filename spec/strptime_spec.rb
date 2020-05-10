@@ -212,4 +212,8 @@ describe Strptime do
       expect(pr.exec('2016-12-11 00:00:00')).to eq(Time.local(2016,12,11,0,0,0))
     end
   end
+
+  it 'raises with extra characters' do
+    expect{Strptime.new('%Y-%m-%d %H:%M:%S').exec('2020-05-11 01:23:45+09:00')}.to raise_error
+  end
 end

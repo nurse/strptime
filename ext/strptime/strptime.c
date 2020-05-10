@@ -366,6 +366,7 @@ strptime_exec0(void **pc, const char *fmt, const char *str, size_t slen,
 	int r;
 	size_t len;
 	if (*p0 == 'z' || *p0 == 'Z') {
+	    si++;
 	    gmtoff = 0;
 	    ADD_PC(1);
 	    END_INSN(z)
@@ -417,6 +418,8 @@ strptime_exec0(void **pc, const char *fmt, const char *str, size_t slen,
     }
     INSN_ENTRY(_5f)
     {
+	if (si != slen) fail();
+
 	struct timespec ts;
 	struct tm tm;
 	time_t t;
